@@ -24,7 +24,7 @@
     {% block head_scripts %}{% endblock %}
 </head>
 <body>
-    <header class="bg-slate-800 shadow-xl shadow-slate-900/50">
+    <header class="bg-slate-800 shadow-xl shadow-slate-950/70">
         <nav class="flex items-center justify-between p-4 max-w-7xl mx-auto">
             <!-- Logo/Başlık -->
             <a href="{{ url_for('index') }}" class="text-2xl font-bold text-indigo-400 hover:text-indigo-300 transition duration-200">
@@ -35,15 +35,15 @@
             <div class="flex items-center space-x-4">
                 <a href="{{ url_for('index') }}" class="nav-link">Ana Sayfa</a>
                 
-                <!-- Haberler Linki - Geçici olarak index'e yönlendirildi, endpoint eklenmeli -->
+                <!-- HATA YAPAN LİNK DÜZELTİLDİ: Ya tamamen silinmeli ya da mevcut bir endpoint'e (index) yönlendirilmeli. -->
                 <a href="{{ url_for('index') }}" class="nav-link text-amber-400 hover:text-amber-300">Haberler</a> 
                 
                 {% if session.logged_in %}
                     <a href="{{ url_for('dashboard') }}" class="nav-link hidden sm:inline">Sohbet Odaları</a>
                     
-                    <!-- Aktif Oda Butonu -->
-                    {% if 'current_room_code' in session and session.current_room_code is defined %}
-                        {% if rooms and session.current_room_code in rooms %}
+                    <!-- Aktif Oda Butonu (Hata ihtimaline karşı rooms kontrolü yapıldı) -->
+                    {% if 'current_room_code' in session and session.current_room_code is defined and rooms %}
+                        {% if session.current_room_code in rooms %}
                             {% set room_code = session.current_room_code %}
                             {% set room_name = rooms[room_code].name %}
                             

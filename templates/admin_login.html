@@ -3,68 +3,491 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Yönetici Girişi - Admin Panel (Karanlık Mod)</title>
+    <title>Yönetici Paneli - Gizli Giriş</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #1f2937; /* Koyu gri arkaplan */
+            background-color: #111827; /* Çok koyu arkaplan */
+            color: #d1d5db;
+            transition: background-color 0.5s;
         }
-        /* Flash Mesajı Renkleri (Dark Mode Uyumu) */
+        .sidebar {
+            min-width: 250px;
+            max-width: 250px;
+            background-color: #1f2937;
+            border-right: 1px solid #374151;
+        }
+        .card-bg {
+            background-color: #1f2937;
+            border: 1px solid #374151;
+        }
+        /* Flash Mesajları */
         .flash-success { background-color: #10b981; color: #ecfdf5; }
         .flash-danger { background-color: #ef4444; color: #fee2e2; }
-        .flash-info { background-color: #3b82f6; color: #eff6ff; }
     </style>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
 </head>
-<body class="flex items-center justify-center min-h-screen">
+<body class="flex flex-col min-h-screen">
 
-    <div class="w-full max-w-md bg-gray-800 p-8 rounded-xl shadow-2xl transition duration-500 border border-gray-700">
-        <h2 class="text-3xl font-bold text-white mb-6 text-center">Yönetici Girişi</h2>
-        <p class="text-center text-sm text-gray-400 mb-8">Devam etmek için yönetici bilgilerinizi giriniz. (Kullanıcı Adı: admin, Şifre: sifre123)</p>
+    <!-- Ana Konteyner -->
+    <div id="app-container" class="flex-grow flex">
+        
+        <!-- Giriş Ekranı (Varsayılan olarak görünür) -->
+        <div id="login-screen" class="flex items-center justify-center w-full min-h-screen">
+            <div class="w-full max-w-md bg-gray-800 p-8 rounded-xl shadow-2xl transition duration-500 border border-gray-700">
+                <h2 class="text-3xl font-bold text-white mb-6 text-center">Yönetici Girişi</h2>
+                <p class="text-center text-sm text-gray-400 mb-6">Devam etmek için yönetici bilgilerinizi giriniz.</p>
 
-        <!-- Flash Mesajları (Flask tarafından doldurulacak) -->
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                <div class="mb-4">
-                    {% for category, message in messages %}
-                        <div class="p-3 mb-2 rounded-lg text-sm border border-opacity-50 
-                            {% if category == 'danger' %}flash-danger{% elif category == 'success' %}flash-success{% else %}flash-info{% endif %}" role="alert">
-                            {{ message }}
+                <!-- Flash Mesajı Gösterme Alanı -->
+                <div id="login-message" class="mb-4 hidden p-3 rounded-lg text-sm border border-opacity-50" role="alert"></div>
+
+                <form id="login-form" class="space-y-6">
+                    <div>
+                        <label for="username" class="block text-sm font-medium text-gray-300">Kullanıcı Adı</label>
+                        <div class="mt-1">
+                            <!-- Kullanıcı adı ipucu kaldırıldı -->
+                            <input id="username" name="username" type="text" required 
+                                   class="appearance-none block w-full px-4 py-2 border border-gray-600 bg-gray-700 text-white rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition duration-150"
+                                   placeholder="Kullanıcı Adınızı Girin">
                         </div>
-                    {% endfor %}
-                </div>
-            {% endif %}
-        {% endwith %}
+                    </div>
 
-        <!-- action="{{ url_for('admin_login') }}" Flask'teki /admin/login rotasına POST isteği gönderir -->
-        <form method="POST" action="{{ url_for('admin_login') }}" class="space-y-6">
-            <div>
-                <label for="username" class="block text-sm font-medium text-gray-300">Kullanıcı Adı</label>
-                <div class="mt-1">
-                    <input id="username" name="username" type="text" required 
-                           class="appearance-none block w-full px-4 py-2 border border-gray-600 bg-gray-700 text-white rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition duration-150"
-                           placeholder="admin">
-                </div>
-            </div>
+                    <div>
+                        <label for="password" class="block text-sm font-medium text-gray-300">Şifre</label>
+                        <div class="mt-1">
+                            <!-- Şifre ipucu kaldırıldı -->
+                            <input id="password" name="password" type="password" required 
+                                   class="appearance-none block w-full px-4 py-2 border border-gray-600 bg-gray-700 text-white rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition duration-150"
+                                   placeholder="Şifrenizi Girin">
+                        </div>
+                    </div>
 
-            <div>
-                <label for="password" class="block text-sm font-medium text-gray-300">Şifre</label>
-                <div class="mt-1">
-                    <input id="password" name="password" type="password" required 
-                           class="appearance-none block w-full px-4 py-2 border border-gray-600 bg-gray-700 text-white rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition duration-150"
-                           placeholder="sifre123">
-                </div>
+                    <div>
+                        <button type="submit" 
+                                class="w-full flex justify-center py-2 px-4 border border-transparent rounded-lg shadow-md text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-150 transform hover:scale-[1.01] focus:ring-offset-gray-800">
+                            Giriş Yap
+                        </button>
+                    </div>
+                </form>
             </div>
+        </div>
 
-            <div>
-                <button type="submit" 
-                        class="w-full flex justify-center py-2 px-4 border border-transparent rounded-lg shadow-md text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-150 transform hover:scale-[1.01] focus:ring-offset-gray-800">
-                    Giriş Yap
-                </button>
-            </div>
-        </form>
+        <!-- Yönetici Paneli (Gizli, sadece girişten sonra gösterilir) -->
+        <div id="panel-screen" class="hidden flex h-screen overflow-hidden w-full">
+            
+            <!-- Sol Kenar Çubuğu (Sidebar) -->
+            <aside class="sidebar flex flex-col p-4 h-full">
+                <div class="text-xl font-bold text-indigo-400 mb-8 mt-2">
+                    <i data-lucide="shield-check" class="inline-block h-6 w-6 mr-2"></i>
+                    Admin Panel
+                </div>
+                <nav class="flex-grow space-y-2" id="sidebar-nav">
+                    <!-- Navigasyon JS ile doldurulacak -->
+                </nav>
+
+                <!-- Çıkış Butonu -->
+                <div class="pt-4 border-t border-gray-700">
+                    <button onclick="handleLogout()" class="flex items-center p-3 text-sm font-medium text-red-400 hover:bg-gray-700 rounded-lg transition duration-150 w-full">
+                        <i data-lucide="log-out" class="h-5 w-5 mr-3"></i>
+                        Çıkış Yap
+                    </button>
+                </div>
+            </aside>
+
+            <!-- Ana İçerik Alanı -->
+            <main class="flex-1 overflow-y-auto p-8">
+                <header class="mb-10 border-b border-gray-700 pb-4">
+                    <h1 class="text-4xl font-extrabold text-white">Yönetici Paneli</h1>
+                    <p class="text-gray-400 mt-2">Hoş geldiniz! Uygulamanın verilerini ve ayarlarını yönetin.</p>
+                </header>
+
+                <div id="panel-content">
+                    <!-- İçerik JS ile doldurulacak -->
+                </div>
+            </main>
+
+        </div>
     </div>
 
+    <script>
+        // --- Sabitler ve Veriler ---
+        // GİZLİ KREDİBLER BURADA TANIMLANMIŞTIR.
+        const MOCK_CREDENTIALS = {
+            username: 'admin',
+            password: 'sifre123'
+        };
+
+        let MOCK_DATA = {
+            users: { 'user1': 'hash1', 'user2': 'hash2', 'kadir': 'hash3', 'rwr': 'hash4' },
+            rooms: { 'room1': 'Genel Sohbet', 'room2': 'Teknik Destek' },
+            admins: { 'admin': 'hashA' },
+            news_articles: {
+                'n1': { title: 'Yeni Özellikler Geliyor!', content: 'Uygulamamız yakında büyük bir güncelleme alacak.' },
+                'n2': { title: 'Sunucu Bakımı', content: 'Pazartesi günü 02:00-04:00 arası bakım yapılacaktır.' }
+            }
+        };
+
+        const SCREENS = {
+            login: document.getElementById('login-screen'),
+            panel: document.getElementById('panel-screen')
+        };
+        const LOGIN_FORM = document.getElementById('login-form');
+        const PANEL_CONTENT = document.getElementById('panel-content');
+        const LOGIN_MESSAGE = document.getElementById('login-message');
+        const SIDEBAR_NAV = document.getElementById('sidebar-nav');
+        
+        // --- Yardımcı Fonksiyonlar ---
+
+        function showMessage(type, message) {
+            LOGIN_MESSAGE.classList.remove('hidden', 'flash-success', 'flash-danger');
+            LOGIN_MESSAGE.classList.add(type === 'success' ? 'flash-success' : 'flash-danger');
+            LOGIN_MESSAGE.innerHTML = message;
+        }
+
+        function clearMessage() {
+            LOGIN_MESSAGE.classList.add('hidden');
+        }
+
+        function generateUniqueId(prefix) {
+            return prefix + new Date().getTime();
+        }
+
+        // --- Sayfa Yönlendirme ve Auth Kontrolü ---
+
+        function checkAuth() {
+            const loggedIn = sessionStorage.getItem('logged_in');
+
+            if (loggedIn === 'true') {
+                SCREENS.login.classList.add('hidden');
+                SCREENS.panel.classList.remove('hidden');
+                renderPanel();
+                // Sayfa yüklendiğinde iconları yeniden oluştur
+                setTimeout(() => lucide.createIcons(), 50); 
+            } else {
+                SCREENS.login.classList.remove('hidden');
+                SCREENS.panel.classList.add('hidden');
+                // Giriş başarısız mesajını temizle
+                clearMessage();
+            }
+        }
+
+        function handleLogin(event) {
+            event.preventDefault();
+            clearMessage();
+            
+            const username = event.target.username.value;
+            const password = event.target.password.value;
+
+            // Kredibilite kontrolü, sabit olarak tanımlanan gizli bilgilere göre yapılır.
+            if (username === MOCK_CREDENTIALS.username && password === MOCK_CREDENTIALS.password) {
+                sessionStorage.setItem('logged_in', 'true');
+                sessionStorage.setItem('username', username);
+                checkAuth();
+            } else {
+                // Kullanıcıya girişin başarısız olduğuna dair bildirim gösterir
+                showMessage('danger', 'Giriş başarısız. Lütfen kullanıcı adı ve şifrenizi kontrol edin.');
+            }
+        }
+
+        function handleLogout() {
+            sessionStorage.removeItem('logged_in');
+            sessionStorage.removeItem('username');
+            checkAuth();
+            // Çıkış yapıldıktan sonra giriş ekranında başarılı mesajı gösterilmez, sadece login formu temizlenir.
+        }
+
+        // --- Panel İçeriği Oluşturma ---
+
+        function renderSidebar() {
+            const navItems = [
+                { id: 'dashboard', icon: 'layout-dashboard', label: 'Dashboard' },
+                { id: 'users', icon: 'users', label: 'Kullanıcılar' },
+                { id: 'rooms', icon: 'message-square', label: 'Sohbet Odaları' },
+                { id: 'news', icon: 'newspaper', label: 'Haberler' },
+            ];
+
+            SIDEBAR_NAV.innerHTML = navItems.map(item => `
+                <a href="#" onclick="showSection('${item.id}')" class="flex items-center p-3 text-sm font-medium text-gray-300 hover:bg-gray-700 rounded-lg transition duration-150 nav-item" data-section="${item.id}">
+                    <i data-lucide="${item.icon}" class="h-5 w-5 mr-3"></i>
+                    ${item.label}
+                </a>
+            `).join('');
+
+            // İlk olarak Dashboard'ı seçili yap
+            showSection('dashboard');
+            lucide.createIcons(); // Yeni ikonları oluştur
+        }
+
+        function showSection(sectionId) {
+            const sections = ['dashboard', 'users', 'rooms', 'news'];
+            sections.forEach(id => {
+                const sectionElement = document.getElementById(id);
+                if (sectionElement) {
+                    sectionElement.classList.add('hidden');
+                }
+            });
+
+            const targetSection = document.getElementById(sectionId);
+            if (targetSection) {
+                targetSection.classList.remove('hidden');
+            }
+            
+            // Sidebar aktif linki güncelle
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('bg-indigo-600', 'text-white');
+                item.classList.add('text-gray-300', 'hover:bg-gray-700');
+                if (item.getAttribute('data-section') === sectionId) {
+                    item.classList.add('bg-indigo-600', 'text-white');
+                    item.classList.remove('text-gray-300', 'hover:bg-gray-700');
+                }
+            });
+        }
+
+        function renderPanel() {
+            // Panel içeriğini mock verilerle oluşturur
+            const userCount = Object.keys(MOCK_DATA.users).length;
+            const roomCount = Object.keys(MOCK_DATA.rooms).length;
+            const adminCount = Object.keys(MOCK_DATA.admins).length;
+            const newsCount = Object.keys(MOCK_DATA.news_articles).length;
+
+            PANEL_CONTENT.innerHTML = `
+                <!-- DASHBOARD BÖLÜMÜ -->
+                <section id="dashboard" class="mb-12">
+                    <h2 class="text-2xl font-semibold text-gray-200 mb-6 border-b border-gray-700 pb-2 flex items-center">
+                        <i data-lucide="bar-chart-3" class="h-5 w-5 mr-2"></i> Genel Bakış
+                    </h2>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="card-bg p-6 rounded-xl shadow-lg border-indigo-500">
+                            <div class="flex items-center justify-between">
+                                <p class="text-lg font-medium text-gray-400">Toplam Kullanıcı</p>
+                                <i data-lucide="users" class="h-8 w-8 text-indigo-400"></i>
+                            </div>
+                            <p class="text-4xl font-bold text-white mt-2">${userCount}</p>
+                        </div>
+                        <div class="card-bg p-6 rounded-xl shadow-lg border-green-500">
+                            <div class="flex items-center justify-between">
+                                <p class="text-lg font-medium text-gray-400">Sohbet Odası</p>
+                                <i data-lucide="message-circle" class="h-8 w-8 text-green-400"></i>
+                            </div>
+                            <p class="text-4xl font-bold text-white mt-2">${roomCount}</p>
+                        </div>
+                        <div class="card-bg p-6 rounded-xl shadow-lg border-red-500">
+                            <div class="flex items-center justify-between">
+                                <p class="text-lg font-medium text-gray-400">Yönetici Hesabı</p>
+                                <i data-lucide="user-cog" class="h-8 w-8 text-red-400"></i>
+                            </div>
+                            <p class="text-4xl font-bold text-white mt-2">${adminCount}</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- KULLANICILAR BÖLÜMÜ -->
+                <section id="users" class="mb-12 hidden">
+                    <h2 class="text-2xl font-semibold text-gray-200 mb-6 border-b border-gray-700 pb-2 flex items-center">
+                        <i data-lucide="list-checks" class="h-5 w-5 mr-2"></i> Kayıtlı Kullanıcılar (${userCount})
+                    </h2>
+                    <div class="card-bg p-6 rounded-xl shadow-lg overflow-x-auto">
+                        <h3 class="text-xl font-medium text-gray-300 mb-4">Yeni Kullanıcı Ekle</h3>
+                        <form id="add-user-form" class="flex flex-wrap gap-4 mb-6 p-4 border border-gray-700 rounded-lg bg-gray-700">
+                            <input type="text" name="username" placeholder="Kullanıcı Adı" required 
+                                class="flex-1 min-w-[150px] p-2 border border-gray-600 bg-gray-800 text-white rounded-lg focus:ring-indigo-500 focus:border-indigo-500">
+                            <input type="password" name="password" placeholder="Şifre" required 
+                                class="flex-1 min-w-[150px] p-2 border border-gray-600 bg-gray-800 text-white rounded-lg focus:ring-indigo-500 focus:border-indigo-500">
+                            <button type="submit" 
+                                class="py-2 px-4 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition duration-150">
+                                Kullanıcı Ekle
+                            </button>
+                        </form>
+
+                        <h3 class="text-xl font-medium text-gray-300 mb-4 mt-6">Mevcut Kullanıcı Listesi</h3>
+                        <table class="min-w-full divide-y divide-gray-700">
+                            <thead class="bg-gray-700">
+                                <tr>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Kullanıcı Adı</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">İşlemler</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-700">
+                                ${Object.keys(MOCK_DATA.users).map(username => `
+                                <tr class="hover:bg-gray-700">
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-white">${username}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-400 space-x-2">
+                                        <button onclick="deleteUser('${username}')" class="text-red-400 hover:text-red-300 font-medium">Sil</button>
+                                    </td>
+                                </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+                
+                <!-- ODALAR BÖLÜMÜ -->
+                <section id="rooms" class="mb-12 hidden">
+                    <h2 class="text-2xl font-semibold text-gray-200 mb-6 border-b border-gray-700 pb-2 flex items-center">
+                        <i data-lucide="globe" class="h-5 w-5 mr-2"></i> Sohbet Odaları (${roomCount})
+                    </h2>
+                    <div class="card-bg p-6 rounded-xl shadow-lg">
+                        <h3 class="text-xl font-medium text-gray-300 mb-4">Yeni Oda Oluştur</h3>
+                        <form id="add-room-form" class="flex flex-wrap gap-4 mb-6 p-4 border border-gray-700 rounded-lg bg-gray-700">
+                            <input type="text" name="room_name" placeholder="Oda Adı (örn: Genel Sohbet)" required 
+                                class="flex-1 min-w-[200px] p-2 border border-gray-600 bg-gray-800 text-white rounded-lg focus:ring-green-500 focus:border-green-500">
+                            <button type="submit" 
+                                class="py-2 px-4 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition duration-150">
+                                Oda Oluştur
+                            </button>
+                        </form>
+
+                        <h3 class="text-xl font-medium text-gray-300 mb-4 mt-6">Mevcut Odalar</h3>
+                        <ul class="space-y-3">
+                            ${Object.entries(MOCK_DATA.rooms).map(([id, name]) => `
+                            <li class="flex justify-between items-center p-3 bg-gray-700 rounded-lg hover:bg-gray-600 transition duration-150">
+                                <span class="font-medium text-white">${name} (ID: ${id})</span>
+                                <button onclick="deleteRoom('${id}')" class="text-red-400 hover:text-red-300 text-sm font-medium p-1 rounded-md hover:bg-gray-800">
+                                    <i data-lucide="trash-2" class="h-4 w-4"></i>
+                                </button>
+                            </li>
+                            `).join('')}
+                        </ul>
+                    </div>
+                </section>
+
+                <!-- HABERLER BÖLÜMÜ -->
+                <section id="news" class="mb-12 hidden">
+                    <h2 class="text-2xl font-semibold text-gray-200 mb-6 border-b border-gray-700 pb-2 flex items-center">
+                        <i data-lucide="newspaper" class="h-5 w-5 mr-2"></i> Haber Makaleleri (${newsCount})
+                    </h2>
+                    <div class="card-bg p-6 rounded-xl shadow-lg">
+                        <h3 class="text-xl font-medium text-gray-300 mb-4">Yeni Haber Ekle</h3>
+                        <form id="add-news-form" class="space-y-4 mb-8 p-4 border border-gray-700 rounded-lg bg-gray-700">
+                            <div>
+                                <input type="text" name="title" placeholder="Haber Başlığı" required 
+                                       class="w-full p-2 border border-gray-600 bg-gray-800 text-white rounded-lg focus:ring-indigo-500 focus:border-indigo-500">
+                            </div>
+                            <div>
+                                <textarea name="content" placeholder="Haber İçeriği" rows="4" required 
+                                          class="w-full p-2 border border-gray-600 bg-gray-800 text-white rounded-lg focus:ring-indigo-500 focus:border-indigo-500"></textarea>
+                            </div>
+                            <button type="submit" 
+                                    class="py-2 px-4 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition duration-150">
+                                Haber Yayınla
+                            </button>
+                        </form>
+                        
+                        <h3 class="text-xl font-medium text-gray-300 mb-4 mt-6">Yayınlanmış Haberler</h3>
+                        <ul class="space-y-4">
+                            ${Object.entries(MOCK_DATA.news_articles).map(([id, article]) => `
+                            <li class="p-4 border border-gray-700 rounded-lg bg-gray-700 hover:shadow-xl transition duration-150">
+                                <div class="flex justify-between items-start">
+                                    <h4 class="text-lg font-bold text-white">${article.title}</h4>
+                                    <button onclick="deleteNews('${id}')" class="text-red-400 hover:text-red-300 text-sm font-medium p-1 rounded-md hover:bg-gray-800">
+                                        <i data-lucide="x-circle" class="h-5 w-5"></i>
+                                    </button>
+                                </div>
+                                <p class="text-sm text-gray-400 mt-2 line-clamp-2">${article.content}</p>
+                                <p class="text-xs text-gray-500 mt-1">ID: ${id}</p>
+                            </li>
+                            `).join('')}
+                        </ul>
+                    </div>
+                </section>
+            `;
+
+            // Tüm formları yeniden dinlemeye başla
+            document.getElementById('add-user-form').addEventListener('submit', handleAddUser);
+            document.getElementById('add-room-form').addEventListener('submit', handleAddRoom);
+            document.getElementById('add-news-form').addEventListener('submit', handleAddNews);
+            
+            // Dashboard'ı göster
+            showSection('dashboard');
+            lucide.createIcons();
+        }
+
+        // --- CRUD İşlemleri (Mock Veri Yönetimi) ---
+
+        function handleAddUser(event) {
+            event.preventDefault();
+            const username = event.target.username.value;
+            const password = event.target.password.value;
+            MOCK_DATA.users[username] = 'mock-hashed-password'; // Mock hash
+            
+            // Yeni kullanıcı eklendikten sonra form alanlarını temizle
+            event.target.username.value = '';
+            event.target.password.value = '';
+
+            alert(`Kullanıcı "${username}" başarıyla eklendi.`); 
+            renderPanel(); // Paneli yenile
+        }
+
+        function deleteUser(username) {
+            if (confirm(`Kullanıcıyı (${username}) silmek istediğinizden emin misiniz?`)) {
+                delete MOCK_DATA.users[username];
+                alert(`Kullanıcı "${username}" silindi.`);
+                renderPanel();
+            }
+        }
+
+        function handleAddRoom(event) {
+            event.preventDefault();
+            const roomName = event.target.room_name.value;
+            const newId = generateUniqueId('room');
+            MOCK_DATA.rooms[newId] = roomName;
+
+            // Yeni oda eklendikten sonra form alanını temizle
+            event.target.room_name.value = '';
+
+            alert(`Oda "${roomName}" oluşturuldu.`);
+            renderPanel();
+        }
+
+        function deleteRoom(id) {
+            if (confirm(`Odayı (${id}) silmek istediğinizden emin misiniz?`)) {
+                delete MOCK_DATA.rooms[id];
+                alert(`Oda "${id}" silindi.`);
+                renderPanel();
+            }
+        }
+
+        function handleAddNews(event) {
+            event.preventDefault();
+            const title = event.target.title.value;
+            const content = event.target.content.value;
+            const newId = generateUniqueId('news');
+            MOCK_DATA.news_articles[newId] = { title, content };
+
+            // Yeni haber eklendikten sonra form alanlarını temizle
+            event.target.title.value = '';
+            event.target.content.value = '';
+
+            alert(`Haber "${title}" yayınlandı.`);
+            renderPanel();
+        }
+
+        function deleteNews(id) {
+            if (confirm(`Haberi (${id}) silmek istediğinizden emin misiniz?`)) {
+                delete MOCK_DATA.news_articles[id];
+                alert(`Haber "${id}" silindi.`);
+                renderPanel();
+            }
+        }
+        
+        // --- Başlatma ---
+        window.onload = function() {
+            LOGIN_FORM.addEventListener('submit', handleLogin);
+            renderSidebar();
+            checkAuth();
+            lucide.createIcons();
+        };
+
+        // Bu fonksiyonlar HTML içinden çağrıldığı için global olmalıdır.
+        window.handleLogout = handleLogout;
+        window.showSection = showSection;
+        window.deleteUser = deleteUser;
+        window.deleteRoom = deleteRoom;
+        window.deleteNews = deleteNews;
+        
+    </script>
 </body>
 </html>

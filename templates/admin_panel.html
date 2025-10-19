@@ -3,261 +3,260 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Yönetici Paneli - Ana Sayfa (Karanlık Mod)</title>
-    <!-- Tailwind CSS CDN -->
+    <title>Admin Paneli - Yönetim</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #111827; /* Çok koyu arkaplan */
-            color: #d1d5db; /* Açık gri metin rengi */
-        }
-        .sidebar {
-            min-width: 250px;
-            max-width: 250px;
-            box-shadow: 2px 0 5px rgba(0,0,0,0.3);
-            background-color: #1f2937; /* Sidebar arka planı */
-            border-right: 1px solid #374151; /* Koyu sınır */
-        }
-        /* Temel kart arkaplanı */
-        .card-bg {
-            background-color: #1f2937;
-            border: 1px solid #374151;
-        }
-        /* Flash Mesajı Renkleri (Dark Mode Uyumu) */
-        .flash-success {
-            background-color: #10b981;
-            color: #ecfdf5;
-        }
-        .flash-danger {
-            background-color: #ef4444;
-            color: #fee2e2;
-        }
-        .flash-info {
-            background-color: #3b82f6;
-            color: #eff6ff;
+        body { font-family: 'Inter', sans-serif; background-color: #f4f7f9; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* Modalı üstte tutmak için */
+        #confirmation-modal {
+            transition: opacity 0.3s ease-in-out;
         }
     </style>
-    <!-- Lucide Icons -->
-    <script src="https://unpkg.com/lucide@latest"></script>
 </head>
-<body class="flex h-screen overflow-hidden">
+<body>
 
-    <!-- Sol Kenar Çubuğu (Sidebar) -->
-    <aside class="sidebar flex flex-col p-4">
-        <div class="text-xl font-bold text-indigo-400 mb-8 mt-2">
-            <i data-lucide="shield-check" class="inline-block h-6 w-6 mr-2"></i>
-            Admin Panel
-        </div>
-        <nav class="flex-grow space-y-2">
-            <a href="#dashboard" class="flex items-center p-3 text-sm font-medium text-white bg-indigo-600 rounded-lg shadow-md transition duration-150">
-                <i data-lucide="layout-dashboard" class="h-5 w-5 mr-3"></i>
-                Dashboard
-            </a>
-            <a href="#users" class="flex items-center p-3 text-sm font-medium text-gray-300 hover:bg-gray-700 rounded-lg transition duration-150">
-                <i data-lucide="users" class="h-5 w-5 mr-3"></i>
-                Kullanıcılar
-            </a>
-            <a href="#rooms" class="flex items-center p-3 text-sm font-medium text-gray-300 hover:bg-gray-700 rounded-lg transition duration-150">
-                <i data-lucide="message-square" class="h-5 w-5 mr-3"></i>
-                Sohbet Odaları
-            </a>
-            <a href="#news" class="flex items-center p-3 text-sm font-medium text-gray-300 hover:bg-gray-700 rounded-lg transition duration-150">
-                <i data-lucide="newspaper" class="h-5 w-5 mr-3"></i>
-                Haberler
-            </a>
-        </nav>
-
-        <!-- Çıkış Butonu -->
-        <div class="pt-4 border-t border-gray-700">
-            <a href="{{ url_for('logout') }}" class="flex items-center p-3 text-sm font-medium text-red-400 hover:bg-gray-700 rounded-lg transition duration-150">
-                <i data-lucide="log-out" class="h-5 w-5 mr-3"></i>
-                Çıkış Yap
-            </a>
-        </div>
-    </aside>
-
-    <!-- Ana İçerik Alanı -->
-    <main class="flex-1 overflow-y-auto p-8">
-        <!-- Flash Mesajları -->
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                <div class="mb-6">
-                    {% for category, message in messages %}
-                        <div class="p-4 rounded-lg text-sm mb-2 border {% if category == 'danger' %}flash-danger border-red-700{% elif category == 'success' %}flash-success border-green-700{% else %}flash-info border-blue-700{% endif %}" role="alert">
-                            {{ message }}
-                        </div>
-                    {% endfor %}
-                </div>
-            {% endif %}
-        {% endwith %}
-        
-        <header class="mb-10 border-b border-gray-700 pb-4">
-            <h1 class="text-4xl font-extrabold text-white">Yönetici Paneli</h1>
-            <p class="text-gray-400 mt-2">Uygulamanın tüm verilerini ve ayarlarını yönetin.</p>
-        </header>
-
-        <!-- DASHBOARD BÖLÜMÜ -->
-        <section id="dashboard" class="mb-12">
-            <h2 class="text-2xl font-semibold text-gray-200 mb-6 border-b border-gray-700 pb-2 flex items-center">
-                <i data-lucide="bar-chart-3" class="h-5 w-5 mr-2"></i> Genel Bakış
-            </h2>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <!-- Kart 1: Toplam Kullanıcı Sayısı -->
-                <div class="card-bg p-6 rounded-xl shadow-lg border-indigo-500">
-                    <div class="flex items-center justify-between">
-                        <p class="text-lg font-medium text-gray-400">Toplam Kullanıcı</p>
-                        <i data-lucide="users" class="h-8 w-8 text-indigo-400"></i>
-                    </div>
-                    <p class="text-4xl font-bold text-white mt-2">{{ users|length }}</p>
-                </div>
-                <!-- Kart 2: Toplam Oda Sayısı -->
-                <div class="card-bg p-6 rounded-xl shadow-lg border-green-500">
-                    <div class="flex items-center justify-between">
-                        <p class="text-lg font-medium text-gray-400">Sohbet Odası</p>
-                        <i data-lucide="message-circle" class="h-8 w-8 text-green-400"></i>
-                    </div>
-                    <p class="text-4xl font-bold text-white mt-2">{{ rooms|length }}</p>
-                </div>
-                <!-- Kart 3: Admin Sayısı -->
-                <div class="card-bg p-6 rounded-xl shadow-lg border-red-500">
-                    <div class="flex items-center justify-between">
-                        <p class="text-lg font-medium text-gray-400">Yönetici Hesabı</p>
-                        <i data-lucide="user-cog" class="h-8 w-8 text-red-400"></i>
-                    </div>
-                    <p class="text-4xl font-bold text-white mt-2">{{ admins|length }}</p>
-                </div>
+    <!-- Üst Navigasyon Menüsü -->
+    <nav class="bg-gray-800 p-4 shadow-lg">
+        <div class="container mx-auto flex justify-between items-center">
+            <!-- NOT: Jinja2 URL'leri yer tutucu olarak bırakılmıştır -->
+            <a href="{{ url_for('dashboard') }}" class="text-white text-2xl font-bold">Lawiandrew Yönetim</a>
+            <div class="flex items-center">
+                <span class="text-gray-300 mr-4">Merhaba, {{ session['username'] }}</span>
+                <a href="{{ url_for('logout') }}" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-full text-sm transition duration-150">Çıkış Yap</a>
             </div>
-        </section>
+        </div>
+    </nav>
 
-        <!-- KULLANICILAR BÖLÜMÜ -->
-        <section id="users" class="mb-12">
-            <h2 class="text-2xl font-semibold text-gray-200 mb-6 border-b border-gray-700 pb-2 flex items-center">
-                <i data-lucide="list-checks" class="h-5 w-5 mr-2"></i> Kayıtlı Kullanıcılar ({{ users|length }})
-            </h2>
-            <div class="card-bg p-6 rounded-xl shadow-lg overflow-x-auto">
-                <h3 class="text-xl font-medium text-gray-300 mb-4">Yeni Kullanıcı Ekle</h3>
-                <!-- Kullanıcı Ekleme Formu -->
-                <form method="POST" action="{{ url_for('admin_add_user') }}" class="flex flex-wrap gap-4 mb-6 p-4 border border-gray-700 rounded-lg bg-gray-700">
-                    <input type="text" name="username" placeholder="Kullanıcı Adı" required 
-                           class="flex-1 min-w-[150px] p-2 border border-gray-600 bg-gray-800 text-white rounded-lg focus:ring-indigo-500 focus:border-indigo-500">
-                    <input type="password" name="password" placeholder="Şifre" required 
-                           class="flex-1 min-w-[150px] p-2 border border-gray-600 bg-gray-800 text-white rounded-lg focus:ring-indigo-500 focus:border-indigo-500">
-                    <button type="submit" 
-                            class="py-2 px-4 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition duration-150">
-                        Kullanıcı Ekle
+    <div class="container mx-auto p-6 mt-4">
+        <h1 class="text-3xl font-bold text-gray-800 mb-6 border-b pb-2">Admin Panel</h1>
+
+        <!-- Sekme Başlıkları -->
+        <div class="flex border-b border-gray-300 mb-6 overflow-x-auto">
+            <button class="tab-button active flex-shrink-0 px-4 py-2 text-gray-600 hover:text-indigo-700 transition duration-150" data-tab="users">
+                <i class="fas fa-users mr-2"></i> Kullanıcılar ({{ users|length + admins|length }})
+            </button>
+            <button class="tab-button flex-shrink-0 px-4 py-2 text-gray-600 hover:text-indigo-700 transition duration-150" data-tab="news">
+                <i class="fas fa-newspaper mr-2"></i> Haber Yönetimi ({{ news|length }})
+            </button>
+            <button class="tab-button flex-shrink-0 px-4 py-2 text-gray-600 hover:text-indigo-700 transition duration-150" data-tab="rooms">
+                <i class="fas fa-comments mr-2"></i> Aktif Odalar ({{ rooms|length }})
+            </button>
+        </div>
+
+        <!-- Sekme İçerikleri -->
+        <div id="users" class="tab-content active">
+            <!-- Kullanıcı Ekleme Formu -->
+            <div class="bg-white p-6 rounded-xl shadow-lg mb-6">
+                <h2 class="text-xl font-semibold mb-4 text-indigo-700">Yeni Kullanıcı Ekle</h2>
+                <form method="POST" action="{{ url_for('admin_add_user') }}" class="space-y-4">
+                    <input type="text" name="username" placeholder="Kullanıcı Adı" required class="w-full p-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500">
+                    <input type="password" name="password" placeholder="Şifre" required class="w-full p-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500">
+                    <div class="flex items-center">
+                        <input type="checkbox" name="is_admin" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                        <label class="ml-2 text-sm text-gray-600">Yönetici Yetkisi Ver</label>
+                    </div>
+                    <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg transition duration-150 shadow-md">
+                        Kullanıcı/Admin Ekle
                     </button>
                 </form>
+            </div>
 
-                <h3 class="text-xl font-medium text-gray-300 mb-4 mt-6">Mevcut Kullanıcı Listesi</h3>
-                <!-- Kullanıcı Listesi Tablosu -->
-                <table class="min-w-full divide-y divide-gray-700">
-                    <thead class="bg-gray-700">
-                        <tr>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Kullanıcı Adı</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">İşlemler</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-gray-700">
-                        {% for username, hashed_password in users.items() %}
-                        <tr class="hover:bg-gray-700">
-                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-white">{{ username }}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-400 space-x-2">
-                                <!-- Silme Formu Örneği -->
-                                <form method="POST" action="{{ url_for('admin_delete_user', username=username) }}" class="inline-block" onsubmit="return confirm('Kullanıcıyı silmek istediğinizden emin misiniz?');">
-                                    <button type="submit" class="text-red-400 hover:text-red-300 font-medium">Sil</button>
-                                </form>
-                            </td>
-                        </tr>
+            <!-- Kullanıcı Listesi -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Normal Kullanıcılar -->
+                <div class="bg-white p-6 rounded-xl shadow-lg">
+                    <h2 class="text-xl font-semibold mb-4 text-gray-700">Normal Kullanıcılar ({{ users|length }})</h2>
+                    <ul class="space-y-3">
+                        {% for username, hash in users.items() %}
+                        <li class="flex justify-between items-center p-3 bg-gray-50 rounded-lg border">
+                            <span class="text-gray-800">{{ username }}</span>
+                            <!-- CONFIRM() KALDIRILDI ve özel bir modal tetikleyici eklendi -->
+                            <a href="#" 
+                                data-url="{{ url_for('admin_delete_user', username=username) }}" 
+                                data-message="{{ username }} adlı kullanıcıyı silmek istediğinizden emin misiniz?" 
+                                class="delete-trigger text-red-500 hover:text-red-700 transition duration-150 p-2 rounded-full hover:bg-red-100">
+                                <i class="fas fa-trash"></i>
+                            </a>
+                        </li>
                         {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </section>
-        
-        <!-- ODALAR BÖLÜMÜ -->
-        <section id="rooms" class="mb-12">
-            <h2 class="text-2xl font-semibold text-gray-200 mb-6 border-b border-gray-700 pb-2 flex items-center">
-                <i data-lucide="globe" class="h-5 w-5 mr-2"></i> Sohbet Odaları ({{ rooms|length }})
-            </h2>
-            <div class="card-bg p-6 rounded-xl shadow-lg">
-                <!-- Yeni Oda Ekleme Formu -->
-                <h3 class="text-xl font-medium text-gray-300 mb-4">Yeni Oda Oluştur</h3>
-                <form method="POST" action="{{ url_for('admin_add_room') }}" class="flex flex-wrap gap-4 mb-6 p-4 border border-gray-700 rounded-lg bg-gray-700">
-                    <input type="text" name="room_name" placeholder="Oda Adı (örn: Genel Sohbet)" required 
-                           class="flex-1 min-w-[200px] p-2 border border-gray-600 bg-gray-800 text-white rounded-lg focus:ring-green-500 focus:border-green-500">
-                    <button type="submit" 
-                            class="py-2 px-4 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition duration-150">
-                        Oda Oluştur
-                    </button>
-                </form>
+                    </ul>
+                </div>
 
-                <h3 class="text-xl font-medium text-gray-300 mb-4 mt-6">Mevcut Odalar</h3>
-                <!-- Oda Listesi -->
-                <ul class="space-y-3">
-                    {% for room_id, room_name in rooms.items() %}
-                    <li class="flex justify-between items-center p-3 bg-gray-700 rounded-lg hover:bg-gray-600 transition duration-150">
-                        <span class="font-medium text-white">{{ room_name }} (ID: {{ room_id }})</span>
-                        <form method="POST" action="{{ url_for('admin_delete_room', room_id=room_id) }}" class="inline-block" onsubmit="return confirm('Odayı silmek tüm mesajları silecektir. Emin misiniz?');">
-                            <button type="submit" class="text-red-400 hover:text-red-300 text-sm font-medium p-1 rounded-md hover:bg-gray-800">
-                                <i data-lucide="trash-2" class="h-4 w-4"></i>
-                            </button>
-                        </form>
-                    </li>
-                    {% endfor %}
-                </ul>
+                <!-- Admin Kullanıcıları -->
+                <div class="bg-white p-6 rounded-xl shadow-lg border border-indigo-200">
+                    <h2 class="text-xl font-semibold mb-4 text-indigo-700">Yöneticiler ({{ admins|length }})</h2>
+                    <ul class="space-y-3">
+                        {% for username, hash in admins.items() %}
+                        <li class="flex justify-between items-center p-3 bg-indigo-50 rounded-lg border border-indigo-300">
+                            <span class="font-bold text-indigo-800"><i class="fas fa-crown mr-2"></i> {{ username }}</span>
+                            {% if username != session['username'] %}
+                            <!-- CONFIRM() KALDIRILDI ve özel bir modal tetikleyici eklendi -->
+                            <a href="#" 
+                                data-url="{{ url_for('admin_delete_user', username=username) }}" 
+                                data-message="{{ username }} adlı yöneticiyi silmek istediğinizden emin misiniz?" 
+                                class="delete-trigger text-red-500 hover:text-red-700 transition duration-150 p-2 rounded-full hover:bg-red-100">
+                                <i class="fas fa-trash"></i>
+                            </a>
+                            {% else %}
+                            <span class="text-xs text-gray-500"> (Siz)</span>
+                            {% endif %}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
             </div>
-        </section>
+        </div>
 
-        <!-- HABERLER BÖLÜMÜ -->
-        <section id="news" class="mb-12">
-            <h2 class="text-2xl font-semibold text-gray-200 mb-6 border-b border-gray-700 pb-2 flex items-center">
-                <i data-lucide="newspaper" class="h-5 w-5 mr-2"></i> Haber Makaleleri ({{ news|length }})
-            </h2>
-            <div class="card-bg p-6 rounded-xl shadow-lg">
-                <!-- Yeni Haber Ekleme Formu -->
-                <h3 class="text-xl font-medium text-gray-300 mb-4">Yeni Haber Ekle</h3>
-                <form method="POST" action="{{ url_for('admin_add_news') }}" class="space-y-4 mb-8 p-4 border border-gray-700 rounded-lg bg-gray-700">
-                    <div>
-                        <input type="text" name="title" placeholder="Haber Başlığı" required 
-                               class="w-full p-2 border border-gray-600 bg-gray-800 text-white rounded-lg focus:ring-indigo-500 focus:border-indigo-500">
-                    </div>
-                    <div>
-                        <textarea name="content" placeholder="Haber İçeriği" rows="4" required 
-                                  class="w-full p-2 border border-gray-600 bg-gray-800 text-white rounded-lg focus:ring-indigo-500 focus:border-indigo-500"></textarea>
-                    </div>
-                    <button type="submit" 
-                            class="py-2 px-4 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition duration-150">
+        <div id="news" class="tab-content">
+            <!-- Haber Ekleme Formu -->
+            <div class="bg-white p-6 rounded-xl shadow-lg mb-6">
+                <h2 class="text-xl font-semibold mb-4 text-green-700">Yeni Haber Ekle</h2>
+                <form method="POST" action="{{ url_for('admin_add_news') }}" enctype="multipart/form-data" class="space-y-4">
+                    <input type="text" name="title" placeholder="Başlık" required class="w-full p-2 border border-gray-300 rounded-lg">
+                    <input type="text" name="summary" placeholder="Kısa Özet" required class="w-full p-2 border border-gray-300 rounded-lg">
+                    <textarea name="content" placeholder="Haber İçeriği" rows="5" required class="w-full p-2 border border-gray-300 rounded-lg"></textarea>
+                    <input type="file" name="image" accept="image/*" class="w-full p-2 border border-gray-300 rounded-lg bg-gray-50">
+                    <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition duration-150 shadow-md">
                         Haber Yayınla
                     </button>
                 </form>
-                
-                <h3 class="text-xl font-medium text-gray-300 mb-4 mt-6">Yayınlanmış Haberler</h3>
-                <!-- Haber Listesi -->
+            </div>
+
+            <!-- Haber Listesi -->
+            <div class="bg-white p-6 rounded-xl shadow-lg">
+                <h2 class="text-xl font-semibold mb-4 text-gray-700">Yayınlanan Haberler ({{ news|length }})</h2>
                 <ul class="space-y-4">
-                    {% for article_id, article in news_articles.items() %}
-                    <li class="p-4 border border-gray-700 rounded-lg bg-gray-700 hover:shadow-xl transition duration-150">
-                        <div class="flex justify-between items-start">
-                            <h4 class="text-lg font-bold text-white">{{ article.title }}</h4>
-                            <form method="POST" action="{{ url_for('admin_delete_news', article_id=article_id) }}" class="inline-block" onsubmit="return confirm('Bu haberi silmek istediğinizden emin misiniz?');">
-                                <button type="submit" class="text-red-400 hover:text-red-300 text-sm font-medium p-1 rounded-md hover:bg-gray-800">
-                                    <i data-lucide="x-circle" class="h-5 w-5"></i>
-                                </button>
-                            </form>
+                    {% for id, article in news.items()|reverse %}
+                    <li class="flex justify-between items-center p-4 bg-gray-50 rounded-lg border">
+                        <div class="flex items-center">
+                            {% if article.image %}
+                                <!-- NOT: Statik dosya erişim yolu Flask varsayımlarına göredir -->
+                                <img src="{{ url_for('static', filename='images/' + article.image) }}" alt="Haber Resmi" class="w-12 h-12 object-cover rounded-md mr-4">
+                            {% else %}
+                                <div class="w-12 h-12 flex items-center justify-center bg-gray-200 rounded-md mr-4 text-gray-500"><i class="fas fa-image"></i></div>
+                            {% endif %}
+                            <span class="font-medium text-gray-800">{{ article.title }}</span>
                         </div>
-                        <p class="text-sm text-gray-400 mt-2 line-clamp-2">{{ article.content }}</p>
-                        <p class="text-xs text-gray-500 mt-1">ID: {{ article_id }}</p>
+                        <div class="space-x-2 flex items-center">
+                            <a href="{{ url_for('admin_edit_news', news_id=id) }}" class="text-blue-500 hover:text-blue-700 transition duration-150 p-2 rounded-full hover:bg-blue-100">
+                                <i class="fas fa-edit"></i> Düzenle
+                            </a>
+                            <!-- CONFIRM() KALDIRILDI ve özel bir modal tetikleyici eklendi -->
+                            <a href="#" 
+                                data-url="{{ url_for('admin_delete_news', news_id=id) }}" 
+                                data-message="'{{ article.title }}' başlıklı haberi silmek istediğinizden emin misiniz?" 
+                                class="delete-trigger text-red-500 hover:text-red-700 transition duration-150 p-2 rounded-full hover:bg-red-100">
+                                <i class="fas fa-trash"></i> Sil
+                            </a>
+                        </div>
                     </li>
                     {% endfor %}
                 </ul>
             </div>
-        </section>
+        </div>
 
-    </main>
+        <div id="rooms" class="tab-content">
+            <div class="bg-white p-6 rounded-xl shadow-lg">
+                <h2 class="text-xl font-semibold mb-4 text-gray-700">Aktif Sohbet Odaları ({{ rooms|length }})</h2>
+                <ul class="space-y-4">
+                    {% for code, room in rooms.items() %}
+                    <li class="p-4 bg-yellow-50 rounded-lg border border-yellow-300">
+                        <p class="font-bold text-lg text-yellow-800">
+                            <i class="fas fa-hashtag mr-2"></i> {{ room.name }} (<span class="text-sm font-normal">{{ code }}</span>)
+                        </p>
+                        <p class="text-sm text-gray-600">Oluşturan: {{ room.creator }} | Kullanıcı: {{ room.users|length }}</p>
+                        <p class="text-sm text-gray-600">Şifre: {{ 'Var' if room.password_hash else 'Yok' }}</p>
+                        <div class="mt-2">
+                             <a href="{{ url_for('room_page', room_code=code) }}" class="text-blue-500 hover:text-blue-700 text-sm font-medium">Odaya Git</a>
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+
+    </div>
     
-    <!-- Lucide Icons'ı başlatma -->
+    <!-- Custom Confirmation Modal (Özel Onay Penceresi) -->
+    <div id="confirmation-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-sm m-4 transform transition-all duration-300 scale-100">
+            <h3 class="text-xl font-bold text-gray-800 mb-4">Onay Gerekiyor</h3>
+            <p id="modal-message" class="text-gray-600 mb-6 text-sm"></p>
+            <div class="flex justify-end space-x-3">
+                <button id="modal-cancel" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition duration-150 font-medium text-sm shadow-sm">
+                    İptal
+                </button>
+                <a href="#" id="modal-confirm" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition duration-150 font-medium text-sm shadow-md">
+                    Sil (Onayla)
+                </a>
+            </div>
+        </div>
+    </div>
+    
     <script>
-        lucide.createIcons();
+        // Sekme Değiştirme JavaScript Kodu
+        document.addEventListener('DOMContentLoaded', () => {
+            const tabs = document.querySelectorAll('.tab-button');
+            const contents = document.querySelectorAll('.tab-content');
+
+            // Sekme İşlevi
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    // Tüm sekmeleri ve içerikleri temizle
+                    tabs.forEach(t => t.classList.remove('active'));
+                    contents.forEach(c => c.classList.remove('active'));
+
+                    // Tıklanan sekmeyi aktif yap
+                    tab.classList.add('active');
+                    
+                    // İlgili içeriği göster
+                    const targetId = tab.getAttribute('data-tab');
+                    document.getElementById(targetId).classList.add('active');
+                });
+            });
+
+            // Özel Modal İşlevi (confirm() yerine)
+            const modal = document.getElementById('confirmation-modal');
+            const modalMessage = document.getElementById('modal-message');
+            const modalConfirmButton = document.getElementById('modal-confirm');
+            const modalCancelButton = document.getElementById('modal-cancel');
+
+            // Silme tetikleyicilerini dinle
+            document.querySelectorAll('.delete-trigger').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    e.preventDefault(); // Varsayılan bağlantı davranışını engelle
+                    
+                    const url = button.getAttribute('data-url');
+                    const message = button.getAttribute('data-message');
+                    
+                    modalMessage.textContent = message;
+                    modalConfirmButton.href = url; // Onay butonunun hedefini ayarla
+                    modal.classList.remove('hidden'); // Modalı göster
+                });
+            });
+
+            // Modal'ı gizleme
+            modalCancelButton.addEventListener('click', () => {
+                modal.classList.add('hidden');
+            });
+
+            // Modal dışına veya ESC tuşuna basınca gizleme
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    modal.classList.add('hidden');
+                }
+            });
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    modal.classList.add('hidden');
+                }
+            });
+        });
     </script>
+
 </body>
 </html>

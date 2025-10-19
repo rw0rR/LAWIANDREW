@@ -220,7 +220,7 @@
                     {% if session.username in room.users|default([]) %}
                         {% set user_in_room = true %}
                         <li>
-                            <span>{{ room.name }} (Kod: <strong class="room-code">{{ code }}</strong>)</span>
+                            <span>{{ room.name }} (Kod:     <strong class="room-code">{{ code }}</strong>)</span>
                             <a href="{{ url_for('room_page', room_code=code) }}">GİT</a>
                         </li>
                     {% endif %}

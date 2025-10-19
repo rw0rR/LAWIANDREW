@@ -4,11 +4,16 @@ from flask import Flask, render_template, request, redirect, url_for, session, f
 import firebase_admin
 from firebase_admin import credentials, firestore, auth
 
-# Uygulama ayarları
+# =================================================================
+# UYGULAMA AYARLARI
+# =================================================================
 app = Flask(__name__)
 # Güvenli oturumlar için gizli anahtar (Render ortam değişkeni olarak ayarlanmalıdır)
 app.secret_key = os.environ.get('SECRET_KEY', 'default_secret_key_for_dev')
 
+# Global değişkenler (Başlangıçta None olarak ayarlanır)
+db = None
+firebase_auth = None
 
 # =================================================================
 # FIREBASE BAĞLANTISI VE BAŞLATMA
@@ -17,14 +22,19 @@ app.secret_key = os.environ.get('SECRET_KEY', 'default_secret_key_for_dev')
 def initialize_firebase():
     """
     FIREBASE_CONFIG ortam değişkenini kullanarak Firebase Admin SDK'yı başlatır.
-    Bu değişken, Render'da tek satır JSON olarak ayarlanmalıdır.
     """
+    global db
+    global firebase_auth
+    
     try:
         # 1. Ortam değişkeninden JSON dizesini alın
         firebase_config_json = os.environ.get("FIREBASE_CONFIG")
         
         if not firebase_config_json:
             print("HATA: FIREBASE_CONFIG ortam değişkeni bulunamadı. Lütfen Render'da ayarlayın.")
+            # Firebase başlatılamazsa, uygulamayı yer tutucu (placeholder) değerlerle devam ettir
+            db = None
+            firebase_auth = None
             return False
 
         # 2. JSON dizesini Python sözlüğüne çevirin
@@ -40,8 +50,6 @@ def initialize_firebase():
             print("Firebase Admin SDK başarıyla başlatıldı.")
 
         # Firestore ve Auth servislerine erişim
-        global db
-        global firebase_auth
         db = firestore.client()
         firebase_auth = auth
         return True
@@ -54,6 +62,7 @@ def initialize_firebase():
         return False
 
 # Uygulama başlangıcında Firebase'i başlatın
+# Not: WSGI sunucuları (Gunicorn/uWSGI) bu kodu çalıştıracaktır.
 initialize_firebase()
 
 
@@ -74,24 +83,28 @@ def login_required(f):
 # Anasayfa
 @app.route('/')
 def index():
-    # Burada ana sayfanın HTML dosyasını döndürün
-    # Örn: return render_template('index.html', current_user=session.get('user_id'))
-    return render_template('index.html')
+    # current_user bilgisini HTML şablonuna gönderiyoruz
+    return render_template('index.html', current_user=session.get('user_id'))
 
 # Kayıt Sayfası
 @app.route('/register', methods=['GET', 'POST'])
 def register():
-    # Kayıt formunu işleyin
+    if not firebase_auth:
+        flash("Sistem hatası: Firebase bağlantısı kurulamadı.", "danger")
+        return redirect(url_for('index'))
+        
     if request.method == 'POST':
         email = request.form.get('email')
         password = request.form.get('password')
         try:
+            # Firebase Admin SDK ile kullanıcı oluşturma
             user = firebase_auth.create_user(email=email, password=password)
             flash("Kayıt başarılı. Lütfen giriş yapın.", "success")
             return redirect(url_for('login'))
         except Exception as e:
             flash(f"Kayıt hatası: {e}", "danger")
-            return render_template('register.html', error=e)
+            # Firebase hatalarını daha kullanıcı dostu göstermek için burası özelleştirilebilir.
+            return render_template('register.html')
     
     return render_template('register.html')
 
@@ -99,14 +112,20 @@ def register():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        # Kullanıcı adıyla (veya e-posta ile) giriş yapma mantığı
-        # Admin SDK, sadece token doğrulaması için kullanılır. 
-        # Bu kısım genellikle Client SDK ile halledilir, ancak 
-        # burası server tarafı olduğu için farklı bir giriş akışı gerekir.
-        # Bu demo için basitleştirilmiş bir yer tutucu bırakıyoruz.
-        flash("Giriş işlemi tamamlandı (Gerçek Firebase Auth kodu burada olmalı).", "success")
-        session['user_id'] = 'mock_user_id' # Başarılı bir girişten sonra user_id'yi ayarlayın
-        return redirect(url_for('dashboard'))
+        # ÖNEMLİ: Admin SDK, doğrudan e-posta/şifre ile giriş yapmak için uygun değildir.
+        # Giriş için genellikle Client SDK (JavaScript) veya özel bir JWT doğrulama akışı kullanılır.
+        # Bu demo için sadece başarılı bir girişi simüle ediyoruz.
+        email = request.form.get('email')
+        password = request.form.get('password')
+
+        if email == "test@example.com" and password == "123456":
+            session['user_id'] = 'mock_user_id' 
+            flash("Giriş başarılı.", "success")
+            return redirect(url_for('dashboard'))
+        else:
+            # Gerçek bir uygulamada, burada Client SDK ile alınmış bir ID token doğrulanmalıdır.
+            flash("Geçersiz e-posta veya şifre.", "danger")
+            return render_template('login.html')
 
     return render_template('login.html')
 
@@ -121,8 +140,18 @@ def logout():
 @app.route('/dashboard')
 @login_required
 def dashboard():
-    # Profil bilgilerini vb. gösterin
-    return render_template('dashboard.html', user_id=session['user_id'])
+    # Firestore'dan kullanıcıya özel veri çekilebilir (eğer db başlatıldıysa)
+    data = None
+    if db:
+        # Örnek: 'users' koleksiyonundan kullanıcının dökümanını çekme
+        try:
+            doc_ref = db.collection('users').document(session['user_id'])
+            doc = doc_ref.get()
+            data = doc.to_dict() if doc.exists else {"message": "Kullanıcı verisi bulunamadı."}
+        except Exception as e:
+            data = {"error": f"Veritabanı hatası: {e}"}
+            
+    return render_template('dashboard.html', user_id=session['user_id'], user_data=data)
 
 
 # =================================================================
@@ -132,7 +161,3 @@ def dashboard():
 if __name__ == '__main__':
     # Local ortamda çalışırken varsayılan portu kullanır
     app.run(debug=True)
-
-# Render üzerinde çalışırken
-# Render, gunicorn/uwsgi gibi bir WSGI sunucusu ile uygulamayı çalıştıracaktır.
-# Bu sunucu, 'app' adlı Flask uygulamasını otomatik olarak bulur.

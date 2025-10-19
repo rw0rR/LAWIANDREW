@@ -1,3 +1,6 @@
 Flask
-firebase-admin
+Flask-SocketIO
+python-socketio
+python-engineio
 gunicorn
+werkzeug

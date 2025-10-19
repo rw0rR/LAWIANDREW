@@ -1,124 +1,14 @@
-<!DOCTYPE html>
-<html lang="tr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Sohbet Uygulaması{% endblock %}</title>
-    
-    <!-- 
-        CSS'in bozulması genellikle bu CDN bağlantısının eksik olmasından kaynaklanır.
-        Tüm sayfalara stil sağlamak için Tailwind CSS CDN'i eklenmiştir.
-    -->
-    <script src="https://cdn.tailwindcss.com"></script>
+{% extends "base.html" %}
 
-    <style>
-        /* Ana fontu ayarla ve sayfa arka planını belirle */
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #1f2937; /* Koyu Gri Arka Plan */
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-        }
-        
-        /* Flask flash mesajları için stil */
-        .flash-message {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 1000;
-            max-width: 300px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
-            border-radius: 0.5rem;
-            animation: fadeInOut 5s forwards; /* 5 saniye sonra kaybolma animasyonu */
-        }
+{% block title %}Ana Sayfa{% endblock %}
 
-        @keyframes fadeInOut {
-            0% { opacity: 0; transform: translateY(-20px); }
-            10% { opacity: 1; transform: translateY(0); }
-            90% { opacity: 1; transform: translateY(0); }
-            100% { opacity: 0; transform: translateY(-20px); }
-        }
-    </style>
-</head>
-<body class="text-white">
+{% block content %}
+    <h1>LAWIANDREW</h1>
+    <p>Giriş yaparak sohbet odaları oluşturabilir ve katılabilirsiniz. En son haberleri okumayı unutmayın!</p>
 
-    <!-- Navbar -->
-    <nav class="bg-gray-800 shadow-md">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex items-center justify-between h-16">
-                <div class="flex items-center">
-                    <a href="{{ url_for('index') }}" class="flex-shrink-0 text-2xl font-bold text-indigo-400 hover:text-indigo-300 transition duration-150">
-                        💬 Sohbetim
-                    </a>
-                </div>
-                <div class="flex items-center space-x-4">
-                    {% if session.get('logged_in') %}
-                        <!-- Oda Oluşturma Formu (Sadece Giriş Yapanlar İçin) -->
-                        <div class="relative group">
-                            <button class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-3 rounded-lg shadow-md transition duration-150 focus:outline-none">
-                                Oda İşlemleri
-                            </button>
-                            <div class="absolute right-0 mt-2 w-64 bg-gray-700 border border-gray-600 rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none group-hover:pointer-events-auto z-50 p-3">
-                                <form method="POST" action="{{ url_for('create_room') }}" class="mb-3">
-                                    <h3 class="text-sm font-semibold text-white mb-2 border-b border-gray-600 pb-1">Yeni Oda Oluştur</h3>
-                                    <input type="text" name="room_name" placeholder="Oda Adı" required 
-                                           class="w-full p-2 mb-2 text-sm bg-gray-800 border border-gray-600 rounded-md text-white focus:ring-indigo-500 focus:border-indigo-500">
-                                    <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white text-sm font-medium py-2 rounded-md transition duration-150">Oluştur</button>
-                                </form>
-                                <form method="POST" action="{{ url_for('join_room_route') }}">
-                                    <h3 class="text-sm font-semibold text-white mb-2 border-b border-gray-600 pb-1">Odaya Katıl</h3>
-                                    <input type="text" name="room_code" placeholder="Oda Kodu (Örn: A1B2C3D4)" required 
-                                           class="w-full p-2 mb-2 text-sm bg-gray-800 border border-gray-600 rounded-md text-white focus:ring-indigo-500 focus:border-indigo-500 uppercase">
-                                    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2 rounded-md transition duration-150">Katıl</button>
-                                </form>
-                            </div>
-                        </div>
-
-                        <!-- Kullanıcı Menüsü -->
-                        <a href="{{ url_for('dashboard') }}" class="text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium transition duration-150">Odalarım</a>
-                        {% if session.get('is_admin') %}
-                            <a href="{{ url_for('admin_panel') }}" class="text-red-300 hover:bg-red-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium transition duration-150">Admin Panel</a>
-                        {% endif %}
-                        <span class="text-indigo-300 text-sm font-bold px-3 py-2">Hoş geldin, {{ session.get('username') }}</span>
-                        <a href="{{ url_for('logout') }}" class="text-gray-300 hover:bg-red-500 hover:text-white px-3 py-2 rounded-md text-sm font-medium transition duration-150">Çıkış Yap</a>
-                    {% else %}
-                        <!-- Misafir Menüsü -->
-                        <a href="{{ url_for('login') }}" class="text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium transition duration-150">Giriş</a>
-                        <a href="{{ url_for('register') }}" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded-md text-sm font-medium transition duration-150">Kayıt Ol</a>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-    </nav>
-
-    <!-- Flash Mesajları -->
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            {% for category, message in messages %}
-                <div class="flash-message p-4 text-sm font-medium {% if category == 'danger' %}bg-red-500 text-white{% elif category == 'success' %}bg-green-500 text-white{% elif category == 'warning' %}bg-yellow-500 text-gray-900{% else %}bg-blue-500 text-white{% endif %}">
-                    {{ message }}
-                </div>
-            {% endfor %}
-        {% endif %}
-    {% endwith %}
-
-    <!-- Ana İçerik Alanı -->
-    <main class="flex-grow">
-        <div class="container mx-auto px-4 py-8">
-            {% block content %}{% endblock %}
-        </div>
-    </main>
-
-    <!-- Footer -->
-    <footer class="bg-gray-800 shadow-inner mt-auto">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 text-center">
-            <p class="text-gray-400 text-sm">&copy; 2024 Sohbet Uygulaması. Tüm Hakları Saklıdır.</p>
-        </div>
-    </footer>
-
-    <!-- JavaScript Blokları -->
-    {% block scripts %}{% endblock %}
-
-</body>
-</html>
+    {% if not session.logged_in %}
+        <p>Hemen <a href="{{ url_for('register') }}">Kayıt Olun</a> veya <a href="{{ url_for('login') }}">Giriş Yapın</a>.</p>
+    {% else %}
+        <p><a href="{{ url_for('dashboard') }}" style="color: #7289da;">Sohbet Odaları Panelinize</a> gitmek için tıklayın.</p>
+    {% endif %}
+{% endblock %}

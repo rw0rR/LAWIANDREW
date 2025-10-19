@@ -1,34 +1,20 @@
 {% extends "base.html" %}
 
-{% block title %}Yönetici Girişi{% endblock %}
+{% block title %}Admin Girişi{% endblock %}
 
 {% block content %}
-    <div class="form-container">
-        <!-- form.css stilini kullanır -->
-        <form method="POST">
-            <h1>Yönetici Girişi</h1>
-            <p style="color: #f04747; text-align: center; margin-bottom: 25px;">Yalnızca yetkili personel için.</p>
-            
-            {% if error %}
-                <!-- Hata mesajı stili style.css'deki .error-message ile uyumludur -->
-                <div class="error-message">{{ error }}</div>
-            {% endif %}
-            
-            <label for="username">Admin Kullanıcı Adı:</label>
-            <input type="text" id="username" name="username" required placeholder="Admin kullanıcı adını girin">
-            
-            <label for="password">Şifre:</label>
-            <input type="password" id="password" name="password" required placeholder="Admin şifresini girin">
-            
-            <button type="submit" style="background-color: #f04747;">Giriş Yap (Admin)</button>
-            
-            <div style="text-align: center; margin-top: 20px; font-size: 14px;">
-                <p style="color: #72767d;">Normal kullanıcı mısınız? 
-                    <a href="{{ url_for('login') }}" style="color: #7289da; text-decoration: none; font-weight: 500;">
-                        Giriş Sayfasına Geri Dön
-                    </a>
-                </p>
-            </div>
-        </form>
-    </div>
+    <form method="POST">
+        <h1>Admin Girişi</h1>
+        {% if error %}
+            <p style="color: #f04747; text-align: center;">{{ error }}</p>
+        {% endif %}
+        
+        <label for="username">Admin Kullanıcı Adı:</label>
+        <input type="text" id="username" name="username" required>
+        
+        <label for="password">Şifre:</label>
+        <input type="password" id="password" name="password" required>
+        
+        <button type="submit">Giriş Yap</button>
+    </form>
 {% endblock %}

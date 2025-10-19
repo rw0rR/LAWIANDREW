@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+
+{% block title %}Oda: {{ room_code }}{% endblock %}
+
+{% block content %}
+    <style>
+        /* Genel Arkaplan */
+        body {
+            background-color: #12121c; 
+            color: #ffffff;
+        }
+
+        /* Ana Sohbet Alanı */
+        .chat-container {
+            max-width: 900px;
+            margin: 30px auto;
+            display: flex;
+            flex-direction: column;
+            height: 80vh; /* Yüksekliğin %80'ini kapla */
+            background-color: #2c2c36;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.7);
+            overflow: hidden;
+        }
+        
+        .chat-header {
+            padding: 15px 20px;
+            background-color: #5c6bc0;
+            color: white;
+            font-size: 1.5em;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* Mesaj Kutusu */
+        .message-box {
+            flex-grow: 1;
+            padding: 20px;
+            overflow-y: auto;
+            /* Scrollbar Stili (Koyu Tema) */
+            scrollbar-color: #5c6bc0 #3e3e46;
+            scrollbar-width: thin;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            padding: 10px;
+            border-radius: 8px;
+            max-width: 80%;
+            word-wrap: break-word;
+        }
+
+        .my-message {
+            background-color: #485498;
+            margin-left: auto;
+            text-align: right;
+            border-bottom-right-radius: 0;
+        }
+
+        .other-message {
+            background-color: #3e3e46;
+            margin-right: auto;
+            text-align: left;
+            border-bottom-left-radius: 0;
+        }
+        
+        .message-user {
+            font-weight: bold;
+            color: #66bb6a; /* Yeşil kullanıcı adı */
+            margin-bottom: 5px;
+            display: block;
+        }
+
+        /* Giriş ve Kontrol Alanı */
+        .chat-input-area {
+            display: flex;
+            padding: 15px 20px;
+            background-color: #1e1e24;
+            align-items: center;
+        }
+
+        .chat-input-area input[type="text"] {
+            flex-grow: 1;
+            padding: 10px;
+            background-color: #3e3e46;
+            color: #ffffff;
+            border: 1px solid #5c6bc0;
+            border-radius: 6px;
+            margin-right: 10px;
+        }
+        
+        .chat-input-area button {
+            padding: 10px 15px;
+            background-color: #66bb6a;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            font-weight: bold;
+            margin-left: 5px;
+        }
+
+        .chat-input-area button:hover {
+            background-color: #4caf50;
+        }
+        
+        /* Kullanıcı listesi (Basitleştirilmiş) */
+        .user-list {
+            padding: 10px 20px;
+            background-color: #1e1e24;
+            color: #cccccc;
+            font-size: 0.9em;
+            border-bottom: 1px solid #3e3e46;
+            display: flex; 
+            justify-content: space-between;
+            align-items: center;
+        }
+        .user-list strong {
+            color: #ffffff;
+        }
+        
+    </style>
+
+    <div class="chat-container">
+        
+        <div class="chat-header">
+            Oda: {{ room_code|default('GENEL') }}
+            <a href="{{ url_for('dashboard') }}" style="color: #ffffff; font-size: 0.8em; text-decoration: underline;">Odalara Geri Dön</a>
+        </div>
+        
+        <div class="user-list">
+            <span>Online Kullanıcılar: <strong>{{ session.username|default('Siz') }}</strong>, Kullanıcı2, Kullanıcı3 (Varsayımsal)</span>
+            
+        </div>
+
+        <div class="message-box" id="message-box">
+            <!-- Gerçek mesajlar buraya JS ile eklenecek -->
+        </div>
+
+        <div class="chat-input-area">
+            
+            <!-- Yazılı Sohbet Alanı -->
+            <input type="text" id="message-input" placeholder="Mesajınızı yazın...">
+            <button id="send-button">GÖNDER</button>
+        </div>
+    </div>
+    
+    <script>
+        // Varsayımsal JavaScript Logic'i
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            
+            // Mesaj Gönderme (Varsayımsal)
+            document.getElementById('send-button').addEventListener('click', function() {
+                const input = document.getElementById('message-input');
+                const message = input.value.trim();
+                if (message) {
+                    console.log('Mesaj gönderildi:', message);
+                    // Mesaj kutusuna ekleme
+                    const msgBox = document.getElementById('message-box');
+                    const newMsg = document.createElement('div');
+                    newMsg.className = 'message my-message';
+                    newMsg.innerHTML = `<span class="message-user">Siz</span>${message}`;
+                    msgBox.appendChild(newMsg);
+                    msgBox.scrollTop = msgBox.scrollHeight; // En alta kaydır
+                    input.value = '';
+                    
+                    // Buraya SocketIO ile mesaj gönderme kodu gelir
+                }
+            });
+            
+            document.getElementById('message-input').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    document.getElementById('send-button').click();
+                }
+            });
+
+        });
+    </script>
+{% endblock %}

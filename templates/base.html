@@ -2,37 +2,72 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>{% block title %}...{% endblock %}</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    {% block head_scripts %}{% endblock %} 
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}LAWIANDREW{% endblock %}</title>
+    <!-- Tailwind CSS CDN Eklendi -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Varsayılan font ayarı */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1e293b; /* Koyu Mavi/Gri Arka Plan (Slate-800) */
+            color: #e2e8f0; /* Açık Gri Metin Rengi (Slate-200) */
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        main {
+            flex-grow: 1;
+            padding: 2rem;
+        }
+    </style>
+    {% block head_scripts %}{% endblock %}
 </head>
 <body>
-    <header>
-        <nav>
-            <a href="{{ url_for('index') }}">Ana Sayfa</a>
-            <a href="{{ url_for('news_index') }}">Haberler</a>
+    <header class="bg-slate-800 shadow-xl shadow-slate-900/50">
+        <nav class="flex items-center justify-between p-4 max-w-7xl mx-auto">
+            <!-- Logo/Başlık -->
+            <a href="{{ url_for('index') }}" class="text-2xl font-bold text-indigo-400 hover:text-indigo-300 transition duration-200">
+                LAWIANDREW
+            </a>
             
-            {% if session.logged_in %}
-                <a href="{{ url_for('dashboard') }}">Sohbet Odaları</a>
+            <!-- Navigasyon Linkleri -->
+            <div class="flex items-center space-x-4">
+                <a href="{{ url_for('index') }}" class="nav-link">Ana Sayfa</a>
                 
-                {% if 'current_room_code' in session and session.current_room_code in rooms %}
-                    {% set room_code = session.current_room_code %}
-                    {% set room_name = rooms[room_code].name %}
+                <!-- Haberler Linki - Geçici olarak index'e yönlendirildi, endpoint eklenmeli -->
+                <a href="{{ url_for('index') }}" class="nav-link text-amber-400 hover:text-amber-300">Haberler</a> 
+                
+                {% if session.logged_in %}
+                    <a href="{{ url_for('dashboard') }}" class="nav-link hidden sm:inline">Sohbet Odaları</a>
                     
-                    <a href="{{ url_for('room_page', room_code=room_code) }}" 
-                       style="background-color: #43b581; color: white; font-weight: bold; border-radius: 5px;">
-                        # {{ room_name }}
-                    </a>
-                {% endif %}
+                    <!-- Aktif Oda Butonu -->
+                    {% if 'current_room_code' in session and session.current_room_code is defined %}
+                        {% if rooms and session.current_room_code in rooms %}
+                            {% set room_code = session.current_room_code %}
+                            {% set room_name = rooms[room_code].name %}
+                            
+                            <a href="{{ url_for('room_page', room_code=room_code) }}"
+                               class="bg-emerald-600 text-white font-semibold py-1 px-3 rounded-lg shadow-md hover:bg-emerald-700 transition duration-200 text-sm">
+                                # {{ room_name }}
+                            </a>
+                        {% endif %}
+                    {% endif %}
 
-                {% if session.is_admin %}
-                    <a href="{{ url_for('admin_panel') }}" style="background-color: #fca311;">ADMIN PANELİ</a>
+                    {% if session.is_admin %}
+                        <a href="{{ url_for('admin_panel') }}" class="nav-link bg-orange-500 text-white hover:bg-orange-600 font-bold">ADMIN PANELİ</a>
+                    {% endif %}
+                    
+                    <!-- Çıkış Butonu -->
+                    <a href="{{ url_for('logout') }}" class="nav-link bg-red-600 text-white hover:bg-red-700">
+                        Çıkış Yap ({{ session.username }})
+                    </a>
+                {% else %}
+                    <!-- Giriş/Kayıt Linkleri -->
+                    <a href="{{ url_for('register') }}" class="nav-link">Kayıt Ol</a>
+                    <a href="{{ url_for('login') }}" class="nav-link bg-indigo-500 text-white hover:bg-indigo-600">Giriş Yap</a>
                 {% endif %}
-                <a href="{{ url_for('logout') }}" style="background-color: #f04747;">Çıkış Yap ({{ session.username }})</a>
-            {% else %}
-                <a href="{{ url_for('register') }}">Kayıt Ol</a>
-                <a href="{{ url_for('login') }}">Giriş Yap</a>
-            {% endif %}
+            </div>
         </nav>
     </header>
 
@@ -41,6 +76,17 @@
         {% endblock %}
     </main>
     
+    <footer class="text-center py-4 text-slate-400 text-sm border-t border-slate-700 mt-8">
+        © 2025 LAWIANDREW. Tüm Hakları Saklıdır.
+    </footer>
+    
     {% block scripts %}{% endblock %}
 </body>
 </html>
+<!-- Navigasyon linklerine uygulanan Tailwind stil sınıfı -->
+<style>
+    .nav-link {
+        /* Koyu arka planda daha iyi görünen açık renkler */
+        @apply text-slate-300 hover:text-indigo-400 transition duration-150 py-1 px-3 rounded-md font-medium;
+    }
+</style>

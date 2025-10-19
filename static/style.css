@@ -1,6 +1,6 @@
 /* static/style.css */
 body {
-    background-color: #36393f; /* Discord Arka Planı */
+    background-color: #36393f; /* Discord Arka Planı (Koyu) */
     color: #dcddde; /* Açık Metin Rengi */
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
     margin: 0;
@@ -50,6 +50,13 @@ form {
     text-align: left;
 }
 
+label {
+    display: block;
+    margin-bottom: 5px;
+    color: #b9bbbe; /* Açık Gri Label Rengi */
+    font-weight: 600;
+}
+
 input[type="text"], input[type="password"] {
     width: 100%;
     padding: 10px;
@@ -59,6 +66,13 @@ input[type="text"], input[type="password"] {
     box-sizing: border-box;
     background-color: #40444b; /* Input Alanı Rengi */
     color: #dcddde;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+input[type="text"]:focus, input[type="password"]:focus {
+    border-color: #7289da; /* Discord Mavisi Odak Rengi */
+    box-shadow: 0 0 0 1px #7289da;
+    outline: none;
 }
 
 button[type="submit"] {
@@ -69,12 +83,18 @@ button[type="submit"] {
     border-radius: 3px;
     cursor: pointer;
     font-size: 16px;
+    font-weight: 600;
     width: 100%;
     margin-top: 10px;
+    transition: background-color 0.2s, transform 0.1s;
 }
 
 button[type="submit"]:hover {
     background-color: #677bc4;
+}
+
+button[type="submit"]:active {
+    transform: translateY(1px);
 }
 
 /* Oda Listesi */
@@ -88,12 +108,66 @@ button[type="submit"]:hover {
 }
 
 .room-list li {
-    background-color: #202225;
+    background-color: #202225; /* Oda Kart Arka Planı (Daha Koyu) */
     padding: 15px;
     margin-bottom: 10px;
-    border-radius: 5px;
-    width: 80%;
+    border-radius: 8px; /* Daha yuvarlak köşeler */
+    width: 100%; /* Dashboard.html'deki panel genişliğine uyum sağlaması için */
+    max-width: none; /* Üstteki form max-width'inden etkilenmemesi için */
     text-align: left;
     display: flex;
     justify-content: space-between;
+    align-items: center;
+    border-left: 5px solid #7289da; /* Discord Mavi çizgi vurgusu */
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+    transition: background-color 0.2s;
+}
+
+.room-list li:hover {
+    background-color: #2f3136; /* Hafif vurgu */
+}
+
+.room-list li span {
+    color: #dcddde;
+    font-size: 1.1rem;
+}
+
+.room-list li .room-code {
+    color: #43b581; /* Yeşil vurgu */
+    font-weight: bold;
+    font-family: monospace;
+    padding-left: 5px;
+}
+
+.room-list li a {
+    background-color: #43b581; /* GİT butonu için yeşil */
+    color: white;
+    text-decoration: none;
+    padding: 8px 15px;
+    border-radius: 3px;
+    font-weight: 600;
+    transition: background-color 0.2s;
+}
+
+.room-list li a:hover {
+    background-color: #3aa673;
+}
+
+.room-not-found {
+    background-color: #2f3136 !important;
+    color: #99aab5;
+    text-align: center;
+    font-style: italic;
+    border-left: 5px solid #99aab5;
+}
+
+/* Haber Sayfası İçin Ek Düzenlemeler */
+.read-more {
+    color: #7289da !important;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.read-more:hover {
+    text-decoration: underline;
 }

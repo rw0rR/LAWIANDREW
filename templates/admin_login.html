@@ -1,20 +1,77 @@
-{% extends "base.html" %}
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Yönetici Girişi - Admin Panel (Karanlık Mod)</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1f2937; /* Koyu gri arkaplan */
+        }
+        /* Flash Mesajı Renkleri (Dark Mode Uyumu) */
+        .flash-success {
+            background-color: #10b981; /* Koyu yeşil */
+            color: #ecfdf5; /* Açık yeşil metin */
+        }
+        .flash-danger {
+            background-color: #ef4444; /* Koyu kırmızı */
+            color: #fee2e2; /* Açık kırmızı metin */
+        }
+        .flash-info {
+            background-color: #3b82f6; /* Koyu mavi */
+            color: #eff6ff; /* Açık mavi metin */
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen">
 
-{% block title %}Admin Girişi{% endblock %}
+    <div class="w-full max-w-md bg-gray-800 p-8 rounded-xl shadow-2xl transition duration-500 border border-gray-700">
+        <h2 class="text-3xl font-bold text-white mb-6 text-center">Yönetici Girişi</h2>
+        <p class="text-center text-sm text-gray-400 mb-8">Devam etmek için yönetici bilgilerinizi giriniz.</p>
 
-{% block content %}
-    <form method="POST">
-        <h1>Admin Girişi</h1>
-        {% if error %}
-            <p style="color: #f04747; text-align: center;">{{ error }}</p>
-        {% endif %}
-        
-        <label for="username">Admin Kullanıcı Adı:</label>
-        <input type="text" id="username" name="username" required>
-        
-        <label for="password">Şifre:</label>
-        <input type="password" id="password" name="password" required>
-        
-        <button type="submit">Giriş Yap</button>
-    </form>
-{% endblock %}
+        <!-- Flash Mesajları (Flask tarafından doldurulacak) -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="mb-4">
+                    {% for category, message in messages %}
+                        <div class="p-3 mb-2 rounded-lg text-sm {% if category == 'danger' %}flash-danger{% elif category == 'success' %}flash-success{% else %}flash-info{% endif %} border border-opacity-50" role="alert">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <form method="POST" action="{{ url_for('admin_login') }}" class="space-y-6">
+            <div>
+                <label for="username" class="block text-sm font-medium text-gray-300">Kullanıcı Adı</label>
+                <div class="mt-1">
+                    <input id="username" name="username" type="text" required 
+                           class="appearance-none block w-full px-4 py-2 border border-gray-600 bg-gray-700 text-white rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition duration-150"
+                           placeholder="admin_kadir veya rwr">
+                </div>
+            </div>
+
+            <div>
+                <label for="password" class="block text-sm font-medium text-gray-300">Şifre</label>
+                <div class="mt-1">
+                    <input id="password" name="password" type="password" required 
+                           class="appearance-none block w-full px-4 py-2 border border-gray-600 bg-gray-700 text-white rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition duration-150"
+                           placeholder="şifreniz">
+                </div>
+            </div>
+
+            <div>
+                <button type="submit" 
+                        class="w-full flex justify-center py-2 px-4 border border-transparent rounded-lg shadow-md text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-150 transform hover:scale-[1.01] focus:ring-offset-gray-800">
+                    Giriş Yap
+                </button>
+            </div>
+        </form>
+    </div>
+
+</body>
+</html>

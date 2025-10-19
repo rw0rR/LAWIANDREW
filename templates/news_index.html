@@ -1,61 +1,42 @@
-{% extends "base.html" %}
-
-{% block title %}Son Dakika Haberler{% endblock %}
-
-{% block content %}
-    <h1>Son Gelişmeler</h1>
-
-    <div class="news-list">
-        {% for id, article in news.items() %}
-            <div class="news-card">
-                {% if article.image %}
-                    <img src="{{ url_for('static', filename='images/' + article.image) }}" alt="{{ article.title }}" class="news-image-small">
-                {% endif %}
-                
-                <div class="news-content">
-                    <h2><a href="{{ url_for('news_detail', news_id=id) }}">{{ article.title }}</a></h2>
-                    <p class="summary">{{ article.summary }}</p>
-                    <a href="{{ url_for('news_detail', news_id=id) }}" class="read-more">Devamını Oku...</a>
-                </div>
-            </div>
-            <hr>
-        {% endfor %}
-    </div>
-
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>Haberler - Sohbet Uygulaması</title>
+    <!-- Buraya base.html'den gelen stil linkleri eklenecek -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <style>
-        .news-list {
-            max-width: 800px;
-            margin: 0 auto;
-            text-align: left;
-        }
-        .news-card {
-            display: flex;
-            margin-bottom: 20px;
-            padding: 15px;
-            background-color: #2f3136;
-            border-radius: 5px;
-        }
-        .news-image-small {
-            width: 150px;
-            height: 100px;
-            object-fit: cover;
-            margin-right: 15px;
-            border-radius: 3px;
-        }
-        .news-content {
-            flex-grow: 1;
-        }
-        .news-content h2 a {
-            color: #7289da;
-            text-decoration: none;
-        }
-        .summary {
-            color: #b9bbbe;
-            font-size: 0.9em;
-        }
-        .read-more {
-            color: #43b581;
-            text-decoration: none;
-        }
+        .news-container { max-width: 800px; margin: 50px auto; padding: 20px; background: #fff; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); }
+        .news-item { border-bottom: 1px solid #eee; padding: 15px 0; }
+        .news-item:last-child { border-bottom: none; }
+        .news-title { font-size: 1.5rem; color: #333; margin-bottom: 5px; }
+        .news-date { font-size: 0.8rem; color: #888; margin-bottom: 10px; display: block; }
+        .news-content { color: #555; }
     </style>
-{% endblock %}
+</head>
+<body>
+    <div class="news-container">
+        <h1 class="text-2xl font-bold mb-6 text-center">Uygulama Haberleri & Duyurular</h1>
+        
+        {% if news_items %}
+            {% for item in news_items %}
+                <div class="news-item">
+                    <h2 class="news-title">{{ item.title }}</h2>
+                    <span class="news-date">Yayın Tarihi: {{ item.date }}</span>
+                    <p class="news-content">{{ item.content }}</p>
+                </div>
+            {% endfor %}
+        {% else %}
+            <p class="text-center text-gray-500">Henüz yayınlanmış bir haber bulunmamaktadır.</p>
+        {% endif %}
+
+        {% if session.get('is_admin') %}
+            <div class="mt-8 text-center">
+                <a href="{{ url_for('admin_edit_news', news_id='add') }}" class="inline-block bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition">Yeni Haber Ekle</a>
+                <a href="{{ url_for('admin_panel') }}" class="inline-block bg-gray-500 text-white py-2 px-4 rounded-lg hover:bg-gray-600 transition ml-4">Admin Paneline Dön</a>
+            </div>
+        {% endif %}
+
+    </div>
+</body>
+</html>

@@ -1,338 +1,486 @@
-import os
-import secrets
-from flask import Flask, render_template, request, redirect, url_for, session, flash, abort
-from flask_socketio import SocketIO, emit, join_room, leave_room
+# app.py (Nihai Versiyon: Kalıcı Veri Kaydı ve Admin İşlevleri)
+
+from flask import Flask, render_template, request, redirect, url_for, session, abort, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import datetime
-
-# ==============================================================================
-# IN-MEMORY VERİ DEPOLAMA (Uygulama yeniden başlatıldığında veriler kaybolur)
-# ==============================================================================
-
-# Kullanıcı verilerini saklar (Kullanıcı adı benzersiz kimliktir)
-USERS = {
-    'admin': {
-        'password_hash': generate_password_hash('123456'), # Varsayılan Admin Şifresi
-        'is_admin': True
-    }
-}
-
-# Oda verilerini ve mesaj geçmişini saklar
-ROOMS = {
-    'TEST01': {
-        'name': 'Genel Sohbet Odası', 
-        'history': [
-            {'username': 'Sistem', 'message': 'Bu oda veritabanı yerine bellekte saklanmaktadır.'},
-            {'username': 'Sistem', 'message': 'Uygulama yeniden başlatılırsa mesaj geçmişi kaybolur.'}
-        ],
-        'creator_id': 'admin'
-    }
-}
-
-# ==============================================================================
-# FLASK ve SOCKETIO KURULUMU
-# ==============================================================================
+from werkzeug.utils import secure_filename 
+import secrets 
+import string
+import time
+import os 
+import json # JSON kütüphanesi eklendi
+from functools import wraps 
+from flask_socketio import SocketIO, join_room, leave_room, send, emit
 
 app = Flask(__name__)
-# Gizli anahtar olarak rastgele bir dize kullan
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', secrets.token_hex(16)) 
-socketio = SocketIO(app) 
+# GÜVENLİK ANAHTARI
+app.secret_key = 'cok_gizli_bir_anahtar_ve_sessiyon_sifresi' 
+
+# ----------------- DOSYA YÜKLEME AYARLARI -----------------
+UPLOAD_FOLDER = 'static/images'
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+DATA_FILE = 'data.json' # Kalıcı veri saklama dosyası
+
+def allowed_file(filename):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+# ----------------- SOCKETIO ENTEGRASYONU -----------------
+socketio = SocketIO(app, cors_allowed_origins="*") 
+
+# ----------------- BELLEK VERİ YAPILARI -----------------
+# Bu yapılar dosya yüklenene kadar boş kalır.
+users = {} 
+rooms = {} 
+messages = {} 
+news_articles = {} 
+news_counter = 1 
+admins = {} 
+# ----------------- ------------------------------------
 
 
-# ==============================================================================
-# OTURUM KONTROL YARDIMCISI
-# ==============================================================================
+# ----------------- VERİ KAYIT YARDIMCI FONKSİYONLARI -----------------
+
+def load_data():
+    """Uygulama başlatıldığında verileri data.json'dan yükler."""
+    global users, rooms, news_articles, news_counter, admins
+    
+    if os.path.exists(DATA_FILE):
+        try:
+            with open(DATA_FILE, 'r') as f:
+                data = json.load(f)
+                users = data.get('users', {})
+                # rooms = data.get('rooms', {}) # Odalar dinamik olduğu için yüklenmez
+                # news_articles'ın anahtarlarını int'e dönüştür (JSON'da string olarak saklanır)
+                news_articles = {int(k): v for k, v in data.get('news_articles', {}).items()} 
+                news_counter = data.get('news_counter', 1)
+                admins = data.get('admins', {})
+                
+                # Hiç admin yoksa varsayılan admini ekle
+                if not admins:
+                    admins['admin_kadir'] = generate_password_hash('sifre123')
+                    
+        except (json.JSONDecodeError, FileNotFoundError):
+            print(f"UYARI: {DATA_FILE} bozuk veya bulunamadı. Varsayılan verilerle devam ediliyor.")
+    
+    # Veri yüklenmediyse varsayılan admini belleğe ekle
+    if not admins:
+        admins['admin_kadir'] = generate_password_hash('sifre123')
+    
+    print("Veriler başarıyla yüklendi.")
+
+def save_data():
+    """Kullanıcıları, yöneticileri ve haberleri data.json'a kaydeder."""
+    # Mesajlar ve aktif odalar kaydedilmez.
+    data_to_save = {
+        'users': users,
+        'admins': admins,
+        'news_articles': news_articles,
+        'news_counter': news_counter
+    }
+    try:
+        with open(DATA_FILE, 'w') as f:
+            json.dump(data_to_save, f, indent=4)
+        print("Veriler başarıyla data.json dosyasına kaydedildi.")
+    except Exception as e:
+        print(f"HATA: Veri kaydı sırasında hata oluştu: {e}")
+
+# ----------------- YARDIMCI FONKSİYONLAR VE DEKORATÖRLER -----------------
+
+def generate_room_code(length=6):
+    """Rastgele 6 haneli kod üretir."""
+    characters = string.ascii_uppercase + string.digits
+    while True:
+        code = ''.join(secrets.choice(characters) for _ in range(length))
+        if code not in rooms:
+            return code
 
 def login_required(f):
-    """Giriş yapılmasını gerektiren dekoratör."""
-    from functools import wraps
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if not session.get('logged_in'):
-            flash('Bu sayfayı görmek için giriş yapmalısınız.', 'warning')
-            return redirect(url_for('login'))
+        if 'logged_in' not in session:
+            return redirect(url_for('login')) 
         return f(*args, **kwargs)
     return decorated_function
-
 
 def admin_required(f):
-    """Admin yetkisi gerektiren dekoratör."""
-    from functools import wraps
     @wraps(f)
-    @login_required
     def decorated_function(*args, **kwargs):
         if not session.get('is_admin'):
-            flash('Bu sayfaya erişim yetkiniz yok.', 'danger')
-            return redirect(url_for('dashboard'))
+            # Yönetici değilse, admin girişine yönlendir
+            return redirect(url_for('admin_login'))
         return f(*args, **kwargs)
     return decorated_function
+# ----------------- ------------------------------------
 
 
-# ==============================================================================
-# FLASK YOLLARI (ROUTES)
-# ==============================================================================
+# ----------------- ODA SEKME TEMİZLEME İŞLEMİ (KRİTİK DÜZELTME) -----------------
+@app.before_request
+def clear_current_room():
+    # Bu fonksiyon, oda içinde olmadığınızda menü sekmesinin düzgün çalışmasını sağlar
+    allowed_endpoints = ['room_page', 'join_room_route', 'create_room', 'leave_room_route', 'static']
+    
+    if request.endpoint and request.endpoint not in allowed_endpoints:
+        if 'current_room_code' in session:
+            del session['current_room_code']
+
+# ----------------- FLASK ROTALARI (Giriş/Kayıt/Çıkış) -----------------
 
 @app.route('/')
 def index():
-    """Ana sayfa."""
     return render_template('index.html')
-
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
-    """Kullanıcı kayıt sayfası ve işlevi."""
-    if session.get('logged_in'):
-        return redirect(url_for('dashboard'))
-
     if request.method == 'POST':
-        username = request.form['username'].strip()
+        username = request.form['username']
         password = request.form['password']
-        
-        if not username or not password:
-            flash('Kullanıcı adı ve şifre boş bırakılamaz.', 'danger')
-            return render_template('register.html')
-
-        # Kullanıcı adının sistemde olup olmadığını kontrol et
-        if username in USERS:
-            flash('Bu kullanıcı adı zaten alınmış.', 'danger')
-            return render_template('register.html')
-        
-        # Yeni kullanıcıyı in-memory USERS sözlüğüne kaydet
-        USERS[username] = {
-            'password_hash': generate_password_hash(password),
-            'is_admin': False
-        }
-
-        flash('Kayıt başarılı! Giriş yapabilirsiniz.', 'success')
+        if username in users or username in admins:
+            return render_template('register.html', error="Bu kullanıcı adı zaten alınmış.")
+        users[username] = generate_password_hash(password)
+        save_data() # Veriyi kaydet
         return redirect(url_for('login'))
-    
     return render_template('register.html')
-
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    """Kullanıcı giriş sayfası ve işlevi."""
-    if session.get('logged_in'):
-        return redirect(url_for('dashboard'))
-
     if request.method == 'POST':
-        username = request.form['username'].strip()
+        username = request.form['username']
         password = request.form['password']
-
-        # Kullanıcıyı USERS sözlüğünde ara ve şifreyi kontrol et
-        if username in USERS and check_password_hash(USERS[username]['password_hash'], password):
-            
-            user_data = USERS[username]
-            
-            # Oturum bilgilerini ayarla
+        
+        # Kullanıcı veya Admin kontrolü
+        user_hash = users.get(username) or admins.get(username)
+        
+        if user_hash and check_password_hash(user_hash, password):
             session['logged_in'] = True
             session['username'] = username
-            session['is_admin'] = user_data.get('is_admin', False)
-            
-            flash('Başarıyla giriş yaptınız.', 'success')
+            session['is_admin'] = username in admins # Admin durumu kontrolü
             return redirect(url_for('dashboard'))
-        else:
-            flash('Kullanıcı adı veya şifre yanlış.', 'danger')
-    
+        
+        return render_template('login.html', error="Geçersiz kullanıcı adı veya şifre.")
     return render_template('login.html')
 
-
 @app.route('/logout')
-@login_required
 def logout():
-    """Çıkış yapma işlevi."""
     session.pop('logged_in', None)
     session.pop('username', None)
     session.pop('is_admin', None)
-    session.pop('current_room_code', None)
-    flash('Başarıyla çıkış yaptınız.', 'success')
+    if 'current_room_code' in session: del session['current_room_code'] 
     return redirect(url_for('index'))
 
+# ----------------- ODA YÖNETİMİ -----------------
 
 @app.route('/dashboard')
 @login_required
 def dashboard():
-    """Sohbet odası listesini gösterir."""
-    # ROOMS sözlüğünden odaları al
-    room_list = [{'code': code, 'name': room['name']} for code, room in ROOMS.items()]
-    
-    return render_template('dashboard.html', 
-                           rooms=room_list, 
-                           current_user=session.get('username'),
-                           rooms_data=ROOMS) # rooms_data'yı base.html için gönderiyoruz
-
+    return render_template('dashboard.html', rooms=rooms)
 
 @app.route('/create_room', methods=['POST'])
 @login_required
 def create_room():
-    """Yeni sohbet odası oluşturur."""
-    room_name = request.form['room_name'].strip()
+    room_name = request.form['room_name']
+    room_password = request.form.get('room_password') 
+    creator = session['username']
+    room_code = generate_room_code()
     
-    if not room_name:
-        flash('Oda adı boş bırakılamaz.', 'danger')
-        return redirect(url_for('dashboard'))
-
-    # Benzersiz bir oda kodu oluştur
-    room_code = secrets.token_hex(4).upper()
-    while room_code in ROOMS:
-        room_code = secrets.token_hex(4).upper()
-
-    # Yeni odayı ROOMS sözlüğüne kaydet
-    ROOMS[room_code] = {
-        'name': room_name,
-        'history': [{'username': 'Sistem', 'message': f'Oda "{room_name}" oluşturuldu.'}],
-        'creator_id': session['username']
+    rooms[room_code] = {
+        "name": room_name,
+        "creator": creator,
+        "users": [creator],
+        "password_hash": generate_password_hash(room_password) if room_password else None 
     }
-    
-    # Yeni odayı aktif oda olarak ayarla
-    session['current_room_code'] = room_code
-    flash(f'Oda "{room_name}" başarıyla oluşturuldu.', 'success')
     return redirect(url_for('room_page', room_code=room_code))
-
-
-@app.route('/room/<room_code>')
-@login_required
-def room_page(room_code):
-    """Belirli bir sohbet odasının sayfasını gösterir."""
-    if room_code not in ROOMS:
-        flash('Böyle bir sohbet odası bulunamadı.', 'danger')
-        return redirect(url_for('dashboard'))
-
-    room = ROOMS[room_code]
-    
-    # Odanın aktif oda olarak ayarlanması
-    session['current_room_code'] = room_code
-    
-    # room.html'e geçmişi gönder
-    return render_template('room.html', 
-                           room_code=room_code, 
-                           room_name=room['name'], 
-                           chat_history=room['history'],
-                           rooms_data=ROOMS) # rooms_data'yı base.html için gönderiyoruz
-
 
 @app.route('/join_room', methods=['POST'])
 @login_required
-def join_room_route():
-    """Kullanıcının mevcut bir odaya katılması."""
-    room_code = request.form['room_code'].strip().upper()
+def join_room_route(): 
+    room_code = request.form.get('room_code', '').strip().upper() 
+    submitted_password = request.form.get('room_password', '')
     
-    if room_code not in ROOMS:
-        flash('Girilen kod ile oda bulunamadı.', 'danger')
-        return redirect(url_for('dashboard'))
+    if room_code in rooms:
+        room = rooms[room_code]
+        
+        if room.get('password_hash'):
+            if not check_password_hash(room['password_hash'], submitted_password):
+                # Hata mesajı dashboard'a taşınmalı (HTML gerektirir)
+                return render_template('dashboard.html', rooms=rooms, join_error="Yanlış oda kodu veya şifresi.")
+        
+        if session['username'] not in room['users']:
+            room['users'].append(session['username'])
+            
+        return redirect(url_for('room_page', room_code=room_code))
+    else:
+        return render_template('dashboard.html', rooms=rooms, join_error="Yanlış oda kodu veya şifresi.") 
 
-    # Odaya yönlendir
-    return redirect(url_for('room_page', room_code=room_code))
+
+@app.route('/leave_room/<string:room_code>')
+@login_required
+def leave_room_route(room_code):
+    room_code = room_code.upper()
+    username = session['username']
+    
+    if room_code in rooms:
+        if username in rooms[room_code]['users']:
+            rooms[room_code]['users'].remove(username)
+            
+            socketio.emit('new_message', {
+                'user': 'Sistem', 
+                'text': f'{username} sohbetten ayrıldı.',
+                'time': time.strftime("%H:%M")
+            }, room=room_code)
+            
+        if not rooms[room_code]['users']:
+            if room_code in messages:
+                del messages[room_code]
+            del rooms[room_code]
+            
+    if 'current_room_code' in session: del session['current_room_code']
+            
+    return redirect(url_for('dashboard')) 
 
 
-@app.route('/admin_panel')
+@app.route('/room/<string:room_code>')
+@login_required
+def room_page(room_code):
+    room_code = room_code.upper()
+
+    if room_code in rooms:
+        room = rooms[room_code]
+        user = session['username']
+        
+        if user not in room['users']:
+            return redirect(url_for('dashboard')) 
+            
+        if room_code not in messages:
+            messages[room_code] = []
+            
+        session['current_room_code'] = room_code # Oda sekmesi için kaydet
+        
+        return render_template('room.html', room_code=room_code, room=room, messages=messages[room_code])
+    else:
+        if 'current_room_code' in session:
+            del session['current_room_code']
+        abort(404) 
+
+# ----------------- HABERLER ROTALARI -----------------
+
+@app.route('/news')
+def news_index():
+    # Haberleri ID'ye göre tersten sırala (en yeniyi üste almak için)
+    sorted_news = dict(sorted(news_articles.items(), key=lambda item: item[0], reverse=True))
+    return render_template('news_index.html', news=sorted_news)
+
+@app.route('/news/<int:news_id>')
+def news_detail(news_id):
+    article = news_articles.get(news_id)
+    if article:
+        return render_template('news_detail.html', article=article)
+    abort(404)
+
+# ----------------- ADMIN ROTALARI (HATA ALAN KISIM) -----------------
+
+@app.route('/admin/login', methods=['GET', 'POST'])
+def admin_login():
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        
+        if username in admins and check_password_hash(admins[username], password):
+            session['logged_in'] = True
+            session['username'] = username
+            session['is_admin'] = True 
+            return redirect(url_for('admin_panel'))
+        
+        return render_template('admin_login.html', error="Geçersiz Admin Bilgileri")
+    return render_template('admin_login.html')
+
+@app.route('/admin/panel')
 @admin_required
 def admin_panel():
-    """Admin paneli: Kullanıcı ve oda yönetimi."""
-    # In-memory verileri paneli render etmek için kullan
-    user_list = [{'username': k, 'is_admin': v['is_admin']} for k, v in USERS.items()]
-    room_list = [{'code': code, 'name': room['name'], 'creator': room['creator_id']} for code, room in ROOMS.items()]
-    
-    return render_template('admin_panel.html', users=user_list, rooms=room_list, rooms_data=ROOMS)
+    # Hata almamak için tüm değişkenler buraya gönderilmeli
+    return render_template('admin_panel.html', 
+                           users=users, 
+                           admins=admins, 
+                           news=news_articles, 
+                           rooms=rooms)
 
+# --- ADMIN: KULLANICI YÖNETİMİ ---
 
-@app.route('/admin/delete_room/<room_code>', methods=['POST'])
+@app.route('/admin/add_user', methods=['POST'])
 @admin_required
-def delete_room(room_code):
-    """Admin: Oda silme."""
-    if room_code in ROOMS:
-        del ROOMS[room_code]
-        flash(f'Oda ({room_code}) başarıyla silindi.', 'success')
+def admin_add_user():
+    username = request.form.get('username')
+    password = request.form.get('password')
+    # Checkbox'tan gelen değer 'on' ise True, yoksa False
+    is_admin = request.form.get('is_admin') == 'on'
+    
+    if not username or not password:
+        return redirect(url_for('admin_panel'))
+        
+    if username in users or username in admins:
+        # Hata mesajı olmadan geri yönlendir
+        return redirect(url_for('admin_panel')) 
+
+    password_hash = generate_password_hash(password)
+    
+    if is_admin:
+        admins[username] = password_hash
     else:
-        flash('Silinecek oda bulunamadı.', 'danger')
+        users[username] = password_hash
+    
+    save_data() # Değişiklikleri kalıcı hale getir
+    return redirect(url_for('admin_panel'))
+
+@app.route('/admin/delete_user/<string:username>')
+@admin_required
+def admin_delete_user(username):
+    # Admin kendi hesabını silemez
+    if username == session.get('username'):
+        return redirect(url_for('admin_panel'))
+        
+    if username in users:
+        del users[username]
+    elif username in admins:
+        # En az bir admin kalmalı kontrolü
+        if len(admins) > 1:
+            del admins[username]
+        else:
+            # Son admini silmeye izin verme
+            pass
+            
+    save_data() # Değişiklikleri kalıcı hale getir
+    return redirect(url_for('admin_panel'))
+
+# --- ADMIN: HABER YÖNETİMİ ---
+
+@app.route('/admin/add_news', methods=['POST'])
+@admin_required
+def admin_add_news():
+    global news_counter
+    
+    file = request.files.get('image')
+    filename = None
+    if file and allowed_file(file.filename):
+        filename = secure_filename(file.filename)
+        # Klasör yoksa oluştur
+        if not os.path.exists(app.config['UPLOAD_FOLDER']):
+            os.makedirs(app.config['UPLOAD_FOLDER'])
+        file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename)) 
+        
+    news_articles[news_counter] = {
+        'id': news_counter,
+        'title': request.form['title'],
+        'summary': request.form['summary'],
+        'content': request.form['content'],
+        'image': filename 
+    }
+    news_counter += 1
+    save_data() # Değişiklikleri kalıcı hale getir
+    return redirect(url_for('admin_panel'))
+
+@app.route('/admin/delete_news/<int:news_id>')
+@admin_required
+def admin_delete_news(news_id):
+    if news_id in news_articles:
+        image_name = news_articles[news_id].get('image')
+        if image_name:
+            try:
+                # Resim dosyasını da sil
+                os.remove(os.path.join(app.config['UPLOAD_FOLDER'], image_name))
+            except Exception as e:
+                print(f"Resim silinirken hata oluştu: {e}")
+                
+        del news_articles[news_id]
+        save_data() # Değişiklikleri kalıcı hale getir
         
     return redirect(url_for('admin_panel'))
 
+@app.route('/admin/edit_news/<int:news_id>', methods=['GET', 'POST'])
+@admin_required
+def admin_edit_news(news_id):
+    article = news_articles.get(news_id)
+    if not article:
+        abort(404)
 
-# ==============================================================================
-# SOCKETIO OLAYLARI (CHAT)
-# ==============================================================================
+    if request.method == 'POST':
+        file = request.files.get('image')
+        filename = article.get('image') 
+        
+        if file and allowed_file(file.filename):
+            # Eski resmi sil ve yenisini kaydet
+            if filename:
+                try:
+                    os.remove(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+                except:
+                    pass
+                    
+            filename = secure_filename(file.filename)
+            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename)) 
+        
+        article['title'] = request.form['title']
+        article['summary'] = request.form['summary']
+        article['content'] = request.form['content']
+        article['image'] = filename 
+        
+        save_data() # Değişiklikleri kalıcı hale getir
+        return redirect(url_for('admin_panel'))
+
+    return render_template('admin_edit_news.html', article=article)
+
+
+# ----------------- SOCKETIO OLAY YÖNETİCİLERİ -----------------
 
 @socketio.on('join')
-@login_required
 def on_join(data):
-    """Kullanıcı bir odaya katıldığında tetiklenir."""
-    room_code = data.get('room_code')
     username = session.get('username')
+    room = data.get('room')
 
-    if not room_code or room_code not in ROOMS:
+    if not username or not room:
         return 
-        
-    # Flask-SocketIO'nun kendi join_room işlevini kullan
-    join_room(room_code)
+
+    join_room(room)
     
-    # Odaya katıldığını yayınla
-    join_message = f'{username} odaya katıldı.'
-    emit('status', {'msg': join_message}, room=room_code)
-    
-    # Mesajı geçmişe kaydet (Sadece durum mesajları belleğe kaydedilmez)
-    # Bu kısmı basitleştiriyoruz, kullanıcı mesajlarını kaydetmek yeterli.
-
-    print(f"{username} joined room {room_code}")
+    system_message = {
+        'user': 'Sistem', 
+        'text': f'{username} sohbete katıldı.',
+        'time': time.strftime("%H:%M")
+    }
+    emit('new_message', system_message, to=room)
 
 
-@socketio.on('leave')
-@login_required
-def on_leave(data):
-    """Kullanıcı odadan ayrıldığında tetiklenir."""
-    room_code = data.get('room_code')
-    username = session.get('username')
-    
-    if not room_code or room_code not in ROOMS:
-        return 
-        
-    leave_room(room_code)
-    
-    leave_message = f'{username} odadan ayrıldı.'
-    emit('status', {'msg': leave_message}, room=room_code)
-
-    print(f"{username} left room {room_code}")
-
-
-@socketio.on('message')
-@login_required
+@socketio.on('send_message')
 def handle_message(data):
-    """Kullanıcıdan gelen mesajı işler ve yayınlar."""
-    room_code = data.get('room_code')
-    message = data.get('message')
     username = session.get('username')
-    
-    if not room_code or room_code not in ROOMS or not message:
+    room = data.get('room')
+    message_text = data.get('message')
+
+    if not username or not room or not message_text:
         return
 
-    timestamp = datetime.now().strftime('%H:%M')
+    current_time = time.strftime("%H:%M")
     
-    # Yayınlanacak veri
     message_data = {
-        'username': username,
-        'message': message,
-        'timestamp': timestamp,
-        'is_admin': session.get('is_admin', False)
+        'user': username,
+        'text': message_text,
+        'time': current_time
     }
-
-    # Mesajı odaya yayınla
-    emit('new_message', message_data, room=room_code)
-
-    # Mesajı in-memory geçmişe kaydet (Son 100 mesajı tutalım)
-    room_history = ROOMS[room_code]['history']
-    room_history.append(message_data)
     
-    # Geçmişi sınırlayalım (Örn: En fazla 100 mesaj)
-    ROOMS[room_code]['history'] = room_history[-100:]
+    if room in messages:
+        messages[room].append(message_data)
+        
+    emit('new_message', message_data, to=room)
 
-    print(f"[{room_code}] {username}: {message}")
 
-
-# ==============================================================================
-# UYGULAMA BAŞLATMA
-# ==============================================================================
+# ----------------- UYGULAMAYI BAŞLATMA -----------------
 
 if __name__ == '__main__':
-    # Flask'ı geliştirme modunda çalıştırıyoruz. 
-    # SocketIO ile birlikte kullanırken socketio.run() kullanın.
-    socketio.run(app, debug=True)
+    # Uygulama başlatıldığında verileri yükle
+    load_data()
+    
+    print("SocketIO Sunucusu Başlatılıyor...")
+    # Dosya yükleme klasörünün varlığını kontrol etme
+    if not os.path.exists(app.config['UPLOAD_FOLDER']):
+        os.makedirs(app.config['UPLOAD_FOLDER'])
+        
+    # host='0.0.0.0' ayarı dış ağ erişimi için kritik
+    socketio.run(app, debug=True, host='0.0.0.0')

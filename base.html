@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}...{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    {% block head_scripts %}{% endblock %} 
+</head>
+<body>
+    <header>
+        <nav>
+            <a href="{{ url_for('index') }}">Ana Sayfa</a>
+            <a href="{{ url_for('news_index') }}">Haberler</a>
+            
+            {% if session.logged_in %}
+                <a href="{{ url_for('dashboard') }}">Sohbet Odaları</a>
+                
+                {% if 'current_room_code' in session and session.current_room_code in rooms %}
+                    {% set room_code = session.current_room_code %}
+                    {% set room_name = rooms[room_code].name %}
+                    
+                    <a href="{{ url_for('room_page', room_code=room_code) }}" 
+                       style="background-color: #43b581; color: white; font-weight: bold; border-radius: 5px;">
+                        # {{ room_name }}
+                    </a>
+                {% endif %}
+
+                {% if session.is_admin %}
+                    <a href="{{ url_for('admin_panel') }}" style="background-color: #fca311;">ADMIN PANELİ</a>
+                {% endif %}
+                <a href="{{ url_for('logout') }}" style="background-color: #f04747;">Çıkış Yap ({{ session.username }})</a>
+            {% else %}
+                <a href="{{ url_for('register') }}">Kayıt Ol</a>
+                <a href="{{ url_for('login') }}">Giriş Yap</a>
+            {% endif %}
+        </nav>
+    </header>
+
+    <main>
+        {% block content %}
+        {% endblock %}
+    </main>
+    
+    {% block scripts %}{% endblock %}
+</body>
+</html>

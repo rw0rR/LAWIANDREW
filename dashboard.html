@@ -1,0 +1,237 @@
+{% extends "base.html" %}
+
+{% block title %}Odalarım{% endblock %}
+
+{% block content %}
+    <style>
+        /* Panel için basit bir düzen */
+        .chat-dashboard {
+            display: grid;
+            /* 2 sütunlu düzen: Sol tarafta formlar (daha az yer), sağ tarafta odalar (daha çok yer) */
+            grid-template-columns: 1fr 1fr; 
+            gap: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Küçük ekranlar için tek sütun */
+        @media (max-width: 768px) {
+            .chat-dashboard {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        /* Genel stil iyileştirmeleri */
+        .panel-section {
+            padding: 20px;
+            /* ARKA PLAN DÜZENLEMESİ: Koyu Tema için daha koyu bir arka plan */
+            background-color: #2c2c36; /* Koyu Gri */
+            border-radius: 12px; /* Köşeleri yuvarlatma */
+            /* Gölgelendirmeyi koyu tema için daha yumuşak yapma */
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5); 
+            border: 1px solid #3e3e46; /* Yumuşak koyu sınır */
+        }
+        
+        /* Genel Başlık Rengi */
+        h1 {
+            color: #ffffff; /* Ana başlığı da görünür yap */
+            text-align: center;
+            margin-bottom: 25px;
+        }
+
+        /* Form stilleri */
+        form h2 {
+            margin-top: 0;
+            margin-bottom: 15px;
+            font-size: 1.5em;
+            /* Alt çizgiyi daha belirgin hale getirme */
+            border-bottom: 2px solid #5c6bc0; /* Parlak Mavi çizgi */
+            padding-bottom: 5px;
+            color: #ffffff; /* Başlık rengini beyaz yapma */
+        }
+
+        label {
+            display: block;
+            margin-top: 10px;
+            font-weight: bold;
+            color: #cccccc; /* Açık Gri metin */
+        }
+
+        input[type="text"], input[type="password"] {
+            width: 100%;
+            padding: 10px; 
+            margin-top: 5px;
+            margin-bottom: 15px;
+            /* KOYU TEMA: Input arka planı ve metin rengi */
+            background-color: #3e3e46; /* Koyu Gri Input Arkaplanı */
+            color: #ffffff; /* Beyaz metin */
+            border: 1px solid #5c6bc0; /* Mavi sınır */
+            border-radius: 6px; 
+            box-sizing: border-box; 
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+        
+        input[type="text"]:focus, input[type="password"]:focus {
+            outline: none;
+            border-color: #7986cb; /* Focus olduğunda daha açık mavi sınır */
+            box-shadow: 0 0 8px rgba(92, 107, 192, 0.7);
+        }
+
+        button[type="submit"] {
+            display: block;
+            width: 100%;
+            padding: 12px; 
+            background-color: #5c6bc0; /* Mavi tonu (daha canlı) */
+            color: white;
+            border: none;
+            border-radius: 6px; 
+            cursor: pointer;
+            font-weight: bold;
+            letter-spacing: 0.5px;
+            transition: background-color 0.3s ease, transform 0.1s;
+        }
+
+        button[type="submit"]:hover {
+            background-color: #485498;
+            transform: translateY(-1px); 
+        }
+        
+        /* Oda listesi stilleri */
+        .room-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        /* Aktif Odalar Başlığı */
+        .panel-section h2 {
+            color: #ffffff;
+        }
+
+        .room-list li {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px; 
+            margin-bottom: 10px;
+            /* KOYU TEMA: Liste öğesi arka planı */
+            background-color: #3e3e46; /* Koyu Input rengiyle aynı */
+            border: 1px solid #485498;
+            border-left: 5px solid #66bb6a; /* Yeşil vurgu çizgisi */
+            border-radius: 8px;
+            color: #e0e0e0; /* Metin rengi */
+            transition: background-color 0.2s ease, box-shadow 0.2s ease;
+        }
+        
+        .room-list li:hover {
+            background-color: #485498; /* Hover'da daha koyu mavi */
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .room-list a {
+            text-decoration: none;
+            color: #ffffff; 
+            padding: 8px 15px; 
+            background-color: #66bb6a; /* Yeşil buton rengi */
+            border: 1px solid #66bb6a;
+            border-radius: 6px;
+            font-weight: bold;
+            transition: all 0.2s ease;
+        }
+        
+        .room-list a:hover {
+            background-color: #4caf50; /* Daha koyu yeşil */
+        }
+
+        .room-code {
+            font-weight: bold;
+            color: #81c784; /* Açık yeşil kod rengi */
+            margin-left: 5px;
+        }
+
+        .error-message {
+            color: #ffcc80; /* Yumuşak turuncu uyarı metni */
+            font-weight: bold; 
+            text-align: center;
+            padding: 15px;
+            background-color: #4e342e; /* Koyu kahverengi arka plan */
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid #ff7043; /* Turuncu sınır */
+        }
+        
+        /* Oda Bulunmama Mesajı */
+        .room-not-found {
+            justify-content: center; 
+            /* KOYU TEMA: Oda yok mesajı */
+            background-color: #3e3e46 !important; 
+            color: #ffeb3b !important; /* Sarı metin */
+            border-color: #ffeb3b !important;
+            border-left: 5px solid #ffeb3b !important; /* Sol tarafa sarı vurgu çizgisi */
+            font-style: italic;
+        }
+    </style>
+
+    <h1>Sohbet Odaları Paneli</h1>
+    
+    {% if join_error %}
+        <p class="error-message">{{ join_error }}</p>
+    {% endif %}
+
+    <div class="chat-dashboard">
+        <!-- SOL SÜTUN: FORM BÖLÜMLERİ -->
+        <div>
+            <!-- Yeni Oda Oluştur Formu -->
+            <div class="panel-section mb-6">
+                <form method="POST" action="{{ url_for('create_room') }}">
+                    <h2>Yeni Oda Oluştur</h2>
+                    <label for="room_name">Oda Adı:</label>
+                    <input type="text" id="room_name" name="room_name" required>
+                    
+                    <label for="room_password_create">Oda Şifresi (Zorunlu Değil):</label>
+                    <input type="password" id="room_password_create" name="room_password">
+                    
+                    <button type="submit">Oda Oluştur</button>
+                </form>
+            </div>
+            
+            <!-- Oda Kodunu Girerek Katıl Formu -->
+            <div class="panel-section">
+                <form method="POST" action="{{ url_for('join_room_route') }}"> 
+                    <h2>Oda Kodunu Girerek Katıl</h2>
+                    <label for="room_code">Oda Kodu:</label>
+                    <input type="text" id="room_code" name="room_code" required>
+                    
+                    <label for="room_password_join">Oda Şifresi (Gerekliyse):</label>
+                    <input type="password" id="room_password_join" name="room_password">
+                    
+                    <button type="submit">Odaya Katıl</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- SAĞ SÜTUN: AKTİF ODALAR LİSTESİ -->
+        <div class="panel-section">
+            <h2>Aktif Odalar (Senin Odaların)</h2>
+            <ul class="room-list">
+                {% set user_in_room = false %}
+                {% for code, room in rooms.items()|default({}) %}
+                    {% if session.username in room.users|default([]) %}
+                        {% set user_in_room = true %}
+                        <li>
+                            <span>{{ room.name }} (Kod: <strong class="room-code">{{ code }}</strong>)</span>
+                            <a href="{{ url_for('room_page', room_code=code) }}">GİT</a>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+                
+                {% if not user_in_room %}
+                    <li class="room-not-found">
+                        Henüz dahil olduğun aktif bir oda bulunmamaktadır.
+                    </li>
+                {% endif %}
+            </ul>
+        </div>
+    </div>
+{% endblock %}

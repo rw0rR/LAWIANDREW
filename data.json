@@ -1,9 +1,16 @@
 {
-    "users": {
-    },
+    "users": {},
     "admins": {
-    
+        "admin_kadir": "scrypt:32768:8:1$e1Gv5FyzPweKKxPf$ceb780e848b87ccb50b5ac4d2bcba1f71a6fc6640c1f8746b303e30ff34ce6d25e90ac50c8745379daec2627ab8b2923ac088a5fa0981abcc8bdf16d54767edb"
     },
-    "news_articles": {},
-    "news_counter": 0
+    "news_articles": {
+        "0": {
+            "id": 0,
+            "title": "ss",
+            "summary": "ss",
+            "content": "ss",
+            "image": null
+        }
+    },
+    "news_counter": 1
 }

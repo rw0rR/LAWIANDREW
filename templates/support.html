@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block title %}Destek & Aktif Odalar{% endblock %}
+
+{% block content %}
+    <div style="display: flex; max-width: 1000px; margin: 0 auto; gap: 40px; text-align: left;">
+        
+        <div style="flex: 1;">
+            <h1>Destek Talep Formu</h1>
+            {% if success %}
+                <p style="color: #43b581; font-weight: bold;">Talebiniz başarıyla alınmıştır. En kısa sürede yanıtlanacaktır.</p>
+            {% endif %}
+
+            <form method="POST">
+                <label for="name">Adınız:</label>
+                <input type="text" id="name" name="name" required>
+                
+                <label for="email">E-posta:</label>
+                <input type="text" id="email" name="email" required>
+                
+                <label for="issue">Sorun/Talep:</label>
+                <textarea id="issue" name="issue" rows="6" required style="width: 100%; padding: 10px; background-color: #40444b; color: #dcddde; border-radius: 4px;"></textarea>
+                
+                <button type="submit">Gönder</button>
+            </form>
+        </div>
+
+        <div style="flex: 1; margin-top: 20px;">
+            <h1>Aktif Sohbet Odaları (Çağrılar)</h1>
+            <ul class="room-list" style="padding: 0; align-items: stretch; margin: 0;">
+                {% for code, room in rooms.items() %}
+                    <li style="display: block; width: auto; margin-bottom: 15px; border-left: 5px solid #7289da;">
+                        <h3>{{ room.name }}</h3>
+                        <p style="font-size: 0.9em; color: #b9bbbe;">Oluşturan: {{ room.creator }}</p>
+                        <p style="font-size: 0.9em; color: #b9bbbe;">Katılımcı Sayısı: {{ room.users|length }}</p>
+                        <a href="{{ url_for('room_page', room_code=code) }}" style="color: #43b581; text-decoration: none; font-weight: bold;">Odaya Katıl</a>
+                        <span style="float: right; color: #f04747;">Kod: {{ code }}</span>
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+{% endblock %}

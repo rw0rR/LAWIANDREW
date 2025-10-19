@@ -6,7 +6,8 @@
     },
     "admins": {
         "admin_kadir": "scrypt:32768:8:1$wHOP65JWSNucpHql$63aa1b024ba487752af73ba5a38e1d24337d3d5215ddbb7ab267d78b3aa4640d3c3cfe6dc65c56c800d06c9e8ca4a887b40ac86db732ef84daa42dda5b3034ba",
-        "12": "scrypt:32768:8:1$oMNrpdcqJ2meoaKM$d26f70c96e119511fe4140c976bef24eb5bb923482a1de31a1991d2a2c2c2873eb61a132cc21b72bc6f274f71c54fb13130f71c7d0b5b8cbc021f801c9c72e6a"
+        "12": "scrypt:32768:8:1$oMNrpdcqJ2meoaKM$d26f70c96e119511fe4140c976bef24eb5bb923482a1de31a1991d2a2c2c2873eb61a132cc21b72bc6f274f71c54fb13130f71c7d0b5b8cbc021f801c9c72e6a",
+        "rwr": "scrypt:32768:8:1$svcs7QEnipvhQ76T$2cb8c2c73f8711258ac93a8692cd0f60a23077b46b737d4ad620ba22b312864cfd05018bc601a18ab7825fc74a40aa32e1fc67cd54c7ea643a69d062d5521ad6"
     },
     "news_articles": {},
     "news_counter": 2

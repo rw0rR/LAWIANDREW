@@ -45,29 +45,43 @@ def load_data():
     """Uygulama başlatıldığında verileri data.json'dan yükler."""
     global users, rooms, news_articles, news_counter, admins
     
+    # Yeni adminlerinizi ve varsayılan admini tutacak geçici set
+    default_admins_to_add = {
+        'admin_kadir': 'sifre123', # Mevcut varsayılan admin
+        'rwr': '797608'             # Yeni istediğiniz admin
+    }
+
     if os.path.exists(DATA_FILE):
         try:
             with open(DATA_FILE, 'r') as f:
                 data = json.load(f)
                 users = data.get('users', {})
-                # rooms = data.get('rooms', {}) # Odalar dinamik olduğu için yüklenmez
                 # news_articles'ın anahtarlarını int'e dönüştür (JSON'da string olarak saklanır)
                 news_articles = {int(k): v for k, v in data.get('news_articles', {}).items()} 
                 news_counter = data.get('news_counter', 1)
                 admins = data.get('admins', {})
                 
-                # Hiç admin yoksa varsayılan admini ekle
-                if not admins:
-                    admins['admin_kadir'] = generate_password_hash('sifre123')
-                    
+                # Mevcut adminler yüklendikten sonra, eksik olan varsayılan adminleri ekle
+                for username, password in default_admins_to_add.items():
+                    if username not in admins:
+                        admins[username] = generate_password_hash(password)
+                        print(f"Varsayılan admin '{username}' eklendi.")
+                
         except (json.JSONDecodeError, FileNotFoundError):
             print(f"UYARI: {DATA_FILE} bozuk veya bulunamadı. Varsayılan verilerle devam ediliyor.")
     
-    # Veri yüklenmediyse varsayılan admini belleğe ekle
+    # Eğer dosya hiç yoksa veya yükleme başarısız olursa, tüm varsayılan adminleri ekle
     if not admins:
-        admins['admin_kadir'] = generate_password_hash('sifre123')
-    
-    print("Veriler başarıyla yüklendi.")
+        for username, password in default_admins_to_add.items():
+            admins[username] = generate_password_hash(password)
+            print(f"İlk çalıştırmada varsayılan admin '{username}' eklendi.")
+
+    # Eğer adminler yüklendi ancak 'rwr' eksikse (eski data.json'dan gelme ihtimali)
+    if 'rwr' not in admins:
+        admins['rwr'] = generate_password_hash('797608')
+
+    save_data() # Yeni adminler eklendiği için veriyi kaydet
+    print("Veriler başarıyla yüklendi ve güncellendi.")
 
 def save_data():
     """Kullanıcıları, yöneticileri ve haberleri data.json'a kaydeder."""
@@ -99,6 +113,9 @@ def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if 'logged_in' not in session:
+            # Hata mesajı ile login sayfasına yönlendir
+            from flask import flash
+            flash('Bu sayfayı görmek için giriş yapmalısınız.', 'warning')
             return redirect(url_for('login')) 
         return f(*args, **kwargs)
     return decorated_function
@@ -107,7 +124,9 @@ def admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if not session.get('is_admin'):
-            # Yönetici değilse, admin girişine yönlendir
+            # Hata mesajı ile admin girişine yönlendir
+            from flask import flash
+            flash('Bu sayfa sadece yöneticilere özeldir.', 'danger')
             return redirect(url_for('admin_login'))
         return f(*args, **kwargs)
     return decorated_function
@@ -115,10 +134,12 @@ def admin_required(f):
 
 
 # ----------------- ODA SEKME TEMİZLEME İŞLEMİ (KRİTİK DÜZELTME) -----------------
+from flask import flash # Flash mesajları için import eklendi
+
 @app.before_request
 def clear_current_room():
     # Bu fonksiyon, oda içinde olmadığınızda menü sekmesinin düzgün çalışmasını sağlar
-    allowed_endpoints = ['room_page', 'join_room_route', 'create_room', 'leave_room_route', 'static']
+    allowed_endpoints = ['room_page', 'join_room_route', 'create_room', 'leave_room_route', 'static', 'admin_edit_news']
     
     if request.endpoint and request.endpoint not in allowed_endpoints:
         if 'current_room_code' in session:
@@ -136,9 +157,11 @@ def register():
         username = request.form['username']
         password = request.form['password']
         if username in users or username in admins:
-            return render_template('register.html', error="Bu kullanıcı adı zaten alınmış.")
+            flash("Bu kullanıcı adı zaten alınmış.", 'warning')
+            return render_template('register.html')
         users[username] = generate_password_hash(password)
         save_data() # Veriyi kaydet
+        flash("Kayıt başarılı! Giriş yapabilirsiniz.", 'success')
         return redirect(url_for('login'))
     return render_template('register.html')
 
@@ -155,9 +178,11 @@ def login():
             session['logged_in'] = True
             session['username'] = username
             session['is_admin'] = username in admins # Admin durumu kontrolü
+            flash(f"Hoş geldin, {username}!", 'success')
             return redirect(url_for('dashboard'))
         
-        return render_template('login.html', error="Geçersiz kullanıcı adı veya şifre.")
+        flash("Geçersiz kullanıcı adı veya şifre.", 'danger')
+        return render_template('login.html')
     return render_template('login.html')
 
 @app.route('/logout')
@@ -166,6 +191,7 @@ def logout():
     session.pop('username', None)
     session.pop('is_admin', None)
     if 'current_room_code' in session: del session['current_room_code'] 
+    flash("Başarıyla çıkış yaptınız.", 'success')
     return redirect(url_for('index'))
 
 # ----------------- ODA YÖNETİMİ -----------------
@@ -189,6 +215,7 @@ def create_room():
         "users": [creator],
         "password_hash": generate_password_hash(room_password) if room_password else None 
     }
+    flash(f"Oda '{room_name}' ({room_code}) başarıyla oluşturuldu.", 'success')
     return redirect(url_for('room_page', room_code=room_code))
 
 @app.route('/join_room', methods=['POST'])
@@ -201,16 +228,23 @@ def join_room_route():
         room = rooms[room_code]
         
         if room.get('password_hash'):
+            # Şifre girişi gerekiyorsa, şifreyi al ve kontrol et
+            if not submitted_password:
+                # Şifre girişi eksikse, özel bir şablonla şifre girişi iste
+                return render_template('join_room_password.html', room_code=room_code)
+                
             if not check_password_hash(room['password_hash'], submitted_password):
-                # Hata mesajı dashboard'a taşınmalı (HTML gerektirir)
-                return render_template('dashboard.html', rooms=rooms, join_error="Yanlış oda kodu veya şifresi.")
-        
+                flash("Yanlış oda şifresi.", 'danger')
+                return redirect(url_for('dashboard'))
+
         if session['username'] not in room['users']:
             room['users'].append(session['username'])
             
+        flash(f"Oda '{room['name']}' ({room_code})'a katıldınız.", 'success')
         return redirect(url_for('room_page', room_code=room_code))
     else:
-        return render_template('dashboard.html', rooms=rooms, join_error="Yanlış oda kodu veya şifresi.") 
+        flash("Yanlış oda kodu.", 'danger')
+        return redirect(url_for('dashboard')) 
 
 
 @app.route('/leave_room/<string:room_code>')
@@ -218,10 +252,14 @@ def join_room_route():
 def leave_room_route(room_code):
     room_code = room_code.upper()
     username = session['username']
+    room_name = ""
     
     if room_code in rooms:
-        if username in rooms[room_code]['users']:
-            rooms[room_code]['users'].remove(username)
+        room = rooms[room_code]
+        room_name = room['name']
+        
+        if username in room['users']:
+            room['users'].remove(username)
             
             socketio.emit('new_message', {
                 'user': 'Sistem', 
@@ -229,10 +267,13 @@ def leave_room_route(room_code):
                 'time': time.strftime("%H:%M")
             }, room=room_code)
             
-        if not rooms[room_code]['users']:
+        if not room['users']:
             if room_code in messages:
                 del messages[room_code]
             del rooms[room_code]
+            flash(f"Oda '{room_name}' boşaldığı için silindi.", 'warning')
+        else:
+            flash(f"Oda '{room_name}'dan ayrıldınız.", 'success')
             
     if 'current_room_code' in session: del session['current_room_code']
             
@@ -249,6 +290,7 @@ def room_page(room_code):
         user = session['username']
         
         if user not in room['users']:
+            flash("Bu odaya giriş izniniz yok.", 'danger')
             return redirect(url_for('dashboard')) 
             
         if room_code not in messages:
@@ -260,7 +302,8 @@ def room_page(room_code):
     else:
         if 'current_room_code' in session:
             del session['current_room_code']
-        abort(404) 
+        flash("Oda bulunamadı.", 'danger')
+        return redirect(url_for('dashboard')) 
 
 # ----------------- HABERLER ROTALARI -----------------
 
@@ -275,9 +318,10 @@ def news_detail(news_id):
     article = news_articles.get(news_id)
     if article:
         return render_template('news_detail.html', article=article)
+    flash("Haber bulunamadı.", 'danger')
     abort(404)
 
-# ----------------- ADMIN ROTALARI (HATA ALAN KISIM) -----------------
+# ----------------- ADMIN ROTALARI -----------------
 
 @app.route('/admin/login', methods=['GET', 'POST'])
 def admin_login():
@@ -289,9 +333,11 @@ def admin_login():
             session['logged_in'] = True
             session['username'] = username
             session['is_admin'] = True 
+            flash(f"Admin girişi başarılı. Hoş geldin, {username}!", 'success')
             return redirect(url_for('admin_panel'))
         
-        return render_template('admin_login.html', error="Geçersiz Admin Bilgileri")
+        flash("Geçersiz Admin Bilgileri", 'danger')
+        return render_template('admin_login.html')
     return render_template('admin_login.html')
 
 @app.route('/admin/panel')
@@ -299,10 +345,10 @@ def admin_login():
 def admin_panel():
     # Hata almamak için tüm değişkenler buraya gönderilmeli
     return render_template('admin_panel.html', 
-                           users=users, 
-                           admins=admins, 
-                           news=news_articles, 
-                           rooms=rooms)
+                             users=users, 
+                             admins=admins, 
+                             news=news_articles, 
+                             rooms=rooms)
 
 # --- ADMIN: KULLANICI YÖNETİMİ ---
 
@@ -311,22 +357,24 @@ def admin_panel():
 def admin_add_user():
     username = request.form.get('username')
     password = request.form.get('password')
-    # Checkbox'tan gelen değer 'on' ise True, yoksa False
     is_admin = request.form.get('is_admin') == 'on'
     
     if not username or not password:
+        flash("Kullanıcı adı ve şifre boş bırakılamaz.", 'danger')
         return redirect(url_for('admin_panel'))
         
     if username in users or username in admins:
-        # Hata mesajı olmadan geri yönlendir
+        flash(f"'{username}' zaten mevcut.", 'warning')
         return redirect(url_for('admin_panel')) 
 
     password_hash = generate_password_hash(password)
     
     if is_admin:
         admins[username] = password_hash
+        flash(f"Admin kullanıcısı '{username}' başarıyla eklendi.", 'success')
     else:
         users[username] = password_hash
+        flash(f"Kullanıcı '{username}' başarıyla eklendi.", 'success')
     
     save_data() # Değişiklikleri kalıcı hale getir
     return redirect(url_for('admin_panel'))
@@ -336,17 +384,18 @@ def admin_add_user():
 def admin_delete_user(username):
     # Admin kendi hesabını silemez
     if username == session.get('username'):
+        flash("Kendi hesabınızı silemezsiniz.", 'danger')
         return redirect(url_for('admin_panel'))
         
     if username in users:
         del users[username]
+        flash(f"Kullanıcı '{username}' silindi.", 'success')
     elif username in admins:
-        # En az bir admin kalmalı kontrolü
         if len(admins) > 1:
             del admins[username]
+            flash(f"Admin kullanıcısı '{username}' silindi.", 'success')
         else:
-            # Son admini silmeye izin verme
-            pass
+            flash("Sistemde en az bir admin kalmalıdır.", 'danger')
             
     save_data() # Değişiklikleri kalıcı hale getir
     return redirect(url_for('admin_panel'))
@@ -374,6 +423,7 @@ def admin_add_news():
         'content': request.form['content'],
         'image': filename 
     }
+    flash(f"Haber '{request.form['title']}' başarıyla eklendi.", 'success')
     news_counter += 1
     save_data() # Değişiklikleri kalıcı hale getir
     return redirect(url_for('admin_panel'))
@@ -383,6 +433,7 @@ def admin_add_news():
 def admin_delete_news(news_id):
     if news_id in news_articles:
         image_name = news_articles[news_id].get('image')
+        article_title = news_articles[news_id].get('title', 'Bilinmeyen Haber')
         if image_name:
             try:
                 # Resim dosyasını da sil
@@ -391,6 +442,7 @@ def admin_delete_news(news_id):
                 print(f"Resim silinirken hata oluştu: {e}")
                 
         del news_articles[news_id]
+        flash(f"Haber '{article_title}' silindi.", 'success')
         save_data() # Değişiklikleri kalıcı hale getir
         
     return redirect(url_for('admin_panel'))
@@ -400,7 +452,8 @@ def admin_delete_news(news_id):
 def admin_edit_news(news_id):
     article = news_articles.get(news_id)
     if not article:
-        abort(404)
+        flash("Düzenlenecek haber bulunamadı.", 'danger')
+        return redirect(url_for('admin_panel'))
 
     if request.method == 'POST':
         file = request.files.get('image')
@@ -416,13 +469,14 @@ def admin_edit_news(news_id):
                     
             filename = secure_filename(file.filename)
             file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename)) 
-        
+            
         article['title'] = request.form['title']
         article['summary'] = request.form['summary']
         article['content'] = request.form['content']
         article['image'] = filename 
         
         save_data() # Değişiklikleri kalıcı hale getir
+        flash(f"Haber '{article['title']}' başarıyla güncellendi.", 'success')
         return redirect(url_for('admin_panel'))
 
     return render_template('admin_edit_news.html', article=article)

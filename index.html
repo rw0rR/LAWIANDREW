@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>👑 LAWIANDREW CHAT</title>
+    <link rel="stylesheet" href="style.css"> 
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+</head>
+<body>
+
+    <div id="login">
+        <div class="login-box">
+            <h2><span id="auth-title">Giriş Yap</span> 🔑</h2>
+            <input type="text" id="auth-username" placeholder="Kullanıcı Adı" maxlength="15">
+            <input type="password" id="auth-password" placeholder="Şifre">
+            
+            <div id="register-fields" style="display: none;">
+                <input type="text" id="auth-profile-pic" placeholder="Profil İkonu (Örn: 😎, F)" maxlength="2">
+                <textarea id="auth-bio" placeholder="Biyografin (Maks 100 karakter)" maxlength="100"></textarea>
+            </div>
+            
+            <button onclick="handleAuth()">Giriş Yap</button>
+            <div id="auth-error"></div>
+            <div id="auth-success"></div>
+            
+            <div id="switch-auth" onclick="switchAuthMode()">Hesabın yok mu? Kayıt Ol</div>
+        </div>
+    </div>
+
+    <div class="sidebar">
+        <div class="server-icon" title="LAWIANDREW CHAT">L</div>
+        <div id="admin-panel-toggle" class="server-icon" style="background:#faa61a; margin-top:10px; display:none;" title="Yönetici Paneli" onclick="openAdminPanel()"><i class="fas fa-tools"></i></div>
+    </div>
+    
+    <div class="channels-wrapper" id="channels-wrapper">
+        <div class="channel-header">
+            <div class="channel-header-top">
+                LAWIANDREW CHAT
+                </div>
+            <div class="channel-date-time" style="display:none;">
+                <span id="current-time"></span> <span id="current-date"></span>
+            </div>
+        </div>
+        
+        <div class="channel-list-container" id="channel-list-container">
+            </div>
+
+        <div class="user-info-panel">
+            <div id="my-profile-icon" class="user-icon" onclick="openProfileModal(myUser.username, true)">
+                L
+                <div class="status-dot status-online" id="my-status-dot"></div> 
+            </div>
+            <div class="user-details">
+                <div id="my-username" class="user-name">Misafir</div>
+                <div class="user-status">Çevrimiçi</div>
+            </div>
+            <button id="logout-btn" onclick="logout()" title="Çıkış Yap"><i class="fas fa-sign-out-alt"></i></button>
+        </div>
+    </div>
+
+    <div class="chat">
+        <div class="header">
+            <button id="mobile-channel-toggle" onclick="toggleChannels()"><i class="fas fa-bars"></i></button>
+            <i class="fas fa-hashtag" id="channel-type-icon"></i> 
+            <span id="current-channel-name">Genel Sohbet</span>
+            <button id="support-ticket-btn" class="input-btn" style="color:var(--link-color); margin-left:15px; display:none;" onclick="openTicketModal()" title="Destek Talebi Oluştur"><i class="fas fa-life-ring"></i></button>
+            <button id="mobile-user-toggle" onclick="toggleUserList()" style="margin-left: auto;"><i class="fas fa-users"></i></button>
+        </div>
+        <div class="messages" id="message-container">
+            </div>
+        <div class="input-area">
+            <input class="input-box" id="msg-input" placeholder="#genel-sohbet kanalına mesaj gönder...">
+            <div id="input-actions">
+                <button class="input-btn" id="emoji-btn" onclick="toggleEmojiPanel()" title="Emoji Seç"><i class="far fa-smile"></i></button>
+                <button class="input-btn" id="send-btn" onclick="sendMessage()" title="Gönder"><i class="fas fa-paper-plane"></i></button>
+            </div>
+            
+            <div id="emoji-panel">
+                </div>
+        </div>
+    </div>
+
+    <div class="user-list-wrapper" id="user-list-wrapper">
+        <div id="users-in-channel">
+            </div>
+    </div>
+    
+    <div id="context-menu">
+        <div class="context-item" id="menu-create-text" onclick="promptChannelName('text')"># Yazı Kanalı Oluştur</div>
+        <div class="context-item admin-only" id="menu-create-category" onclick="promptChannelName('category')">📁 Kategori Oluştur</div>
+    </div>
+    
+    <div id="profile-modal" class="modal">
+        <div class="modal-content">
+            <div id="modal-avatar" class="modal-avatar">?</div>
+            <div id="modal-name" class="modal-name">Kullanıcı Adı</div>
+            <div id="modal-role" style="font-size:14px;">Kullanıcı</div>
+            <hr style="margin:10px 0; border-color:var(--border-color);">
+            
+            <div id="profile-edit-area" style="display:none; text-align:left;">
+                <label for="edit-bio" style="font-size:12px; color:var(--text-muted);">Biyografi:</label>
+                <textarea id="edit-bio" style="width:100%; margin-bottom:10px;"></textarea>
+                
+                <label for="edit-profile-pic" style="font-size:12px; color:var(--text-muted);">Profil İkonu:</label>
+                <input type="text" id="edit-profile-pic" style="width:100%; margin-bottom:10px;">
+                
+                <button id="save-profile-btn" style="width:100%;" onclick="saveUserProfile()">Kaydet</button>
+            </div>
+
+            <div id="modal-bio" class="modal-bio">Biyografi yok.</div>
+            <button class="modal-close" onclick="closeProfileModal()">Kapat</button>
+        </div>
+    </div>
+    
+    <div id="ticket-modal" class="modal">
+        <div class="modal-content">
+            <h3>Destek Talebi Oluştur</h3>
+            <textarea id="ticket-content" placeholder="Sorununuzu detaylıca açıklayın (Maks 300 karakter)" maxlength="300" style="width:100%; height:100px; margin-bottom:15px;"></textarea>
+            <button style="width:100%;" onclick="submitTicket()">Talebi Gönder</button>
+            <button class="modal-close" style="width:100%; background:#72767d; margin-top:5px;" onclick="closeTicketModal()">İptal</button>
+        </div>
+    </div>
+
+    <div id="admin-modal" class="modal">
+        <div class="modal-content">
+            <h3>👑 Yönetici Paneli</h3>
+            
+            <div class="admin-section">
+                <h4>Kullanıcılar (<span id="user-count">0</span>)</h4>
+                <div style="max-height: 300px; overflow-y: auto;">
+                    <table class="admin-table" id="admin-user-table">
+                        <thead>
+                            <tr>
+                                <th>Kullanıcı Adı</th>
+                                <th>Rol</th>
+                                <th>İşlemler</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <div class="admin-section">
+                <h4>Destek Talepleri (<span id="ticket-count">0</span>)</h4>
+                <div style="max-height: 300px; overflow-y: auto;">
+                    <table class="admin-table" id="admin-ticket-table">
+                        <thead>
+                            <tr>
+                                <th>Talep Sahibi</th>
+                                <th>İçerik</th>
+                                <th>Durum</th>
+                                <th>İşlem</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <button class="modal-close" onclick="closeAdminPanel()">Kapat</button>
+        </div>
+    </div>
+    
+    <div id="edit-user-modal" class="modal">
+         <div class="modal-content">
+            <h3>Kullanıcı Düzenle</h3>
+            <input type="hidden" id="admin-edit-username-original">
+            
+            <label for="admin-edit-username" style="font-size:12px; color:var(--text-muted); display:block; text-align:left;">Kullanıcı Adı:</label>
+            <input type="text" id="admin-edit-username" style="width:100%; margin-bottom:10px;">
+            
+            <label for="admin-edit-role" style="font-size:12px; color:var(--text-muted); display:block; text-align:left;">Rol:</label>
+            <select id="admin-edit-role" style="width:100%; margin-bottom:10px;">
+                <option value="user">Kullanıcı</option>
+                <option value="admin">Admin</option>
+            </select>
+            
+            <label for="admin-edit-profile-pic" style="font-size:12px; color:var(--text-muted); display:block; text-align:left;">Profil İkonu:</label>
+            <input type="text" id="admin-edit-profile-pic" style="width:100%; margin-bottom:10px;">
+            
+            <label for="admin-edit-bio" style="font-size:12px; color:var(--text-muted); display:block; text-align:left;">Biyografi:</label>
+            <textarea id="admin-edit-bio" style="width:100%; margin-bottom:10px;"></textarea>
+            
+            <button style="width:100%;" onclick="saveAdminEdit()">Kaydet</button>
+            <button class="modal-close" style="width:100%; background:#72767d; margin-top:5px;" onclick="document.getElementById('edit-user-modal').style.display='none'">İptal</button>
+        </div>
+    </div>
+
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="client.js"></script> 
+</body>
+</html>

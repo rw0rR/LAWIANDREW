@@ -1,0 +1,3 @@
+git add package-lock.json
+git commit -m "package-lock.json dosyasini Render icin ekle"
+git push origin main

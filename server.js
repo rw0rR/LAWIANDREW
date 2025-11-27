@@ -1,28 +1,24 @@
-/* LAWIANDREW CHAT - server.js (YENİLENMİŞ NİHAİ KOD - RENDER UYUMLU) */
+/* LAWIANDREW CHAT - server.js (NİHAİ RENDER UYUMLU) */
 
 const express = require('express');
 const app = express();
-const http = require('http'); // 1. DEĞİŞİKLİK: Standart http modülü çağrıldı
-const server = http.createServer(app); // 1. DEĞİŞİKLİK: http sunucusu Express uygulamasına bağlandı
+const http = require('http'); 
+const server = http.createServer(app); 
 const { v4: uuidv4 } = require('uuid');
 
-// 2. DEĞİŞİKLİK: DİNAMİK PORT AYARI
-// process.env.PORT Render'ın bize verdiği porttur. Yoksa yerelde 3000 kullanır.
-const PORT = process.env.PORT || 3000;
+// KRİTİK 1: DİNAMİK PORT AYARI
+const PORT = process.env.PORT || 3000; 
 
-// 3. DEĞİŞİKLİK: Socket.IO Kurulumu ve CORS Ayarı
-// Bu, sunucunuzun farklı adreslerden (client) gelen bağlantılara izin vermesini sağlar.
-const io = require('socket.io')(server, {
+// KRİTİK 2: Socket.IO Kurulumu ve CORS Ayarı
+const io = require('socket.io')(server, { 
     cors: {
-        origin: "*", // Tüm adreslerden bağlantıya izin ver (güvenlik nedeniyle daha sonra Render URL'nizle kısıtlanabilir)
+        origin: "*", // Geliştirme ve Render için tüm adreslere izin ver
         methods: ["GET", "POST"]
     }
-});
-
+}); 
 
 // --- VERİTABANI SIMÜLASYONU VE DURUM YÖNETİMİ (ORİJİNAL KOD) ---
 let usersDB = {
-    // rw0rR_ YÖNETİCİ HESABI
     'rw0rR_': { 
         username: 'rw0rR_', 
         password: '12345', 
@@ -114,7 +110,6 @@ app.get('/', (req, res) => {
 io.on('connection', (socket) => {
     let currentUserId = null; 
 
-    // Giriş / Kayıt
     socket.on('auth_request', (data) => {
         if (data.type === 'register') {
             if (usersDB[data.username]) {
@@ -166,7 +161,6 @@ io.on('connection', (socket) => {
         }
     });
 
-    // Sayfa Yenileme veya Tekrar Bağlantı İsteği (F5 Kurtarma)
     socket.on('user_reconnect', (username) => {
         const user = usersDB[username];
         if (!user) return; 
@@ -193,13 +187,11 @@ io.on('connection', (socket) => {
         broadcastUsers();
     });
     
-    // Mesajlaşma
     socket.on('mesaj_yolla', (data) => {
         if (!currentUserId) return;
         let messageText = data.mesaj;
         let receivers = [data.channel]; 
 
-        // @everyone ve @here işleme
         if (messageText.includes('@everyone')) {
              io.emit('mesaj_al', {isim: 'SİSTEM', message: `@everyone: ${usersDB[currentUserId].username} bir duyuru yaptı.`, channel: data.channel});
         } 
@@ -228,7 +220,6 @@ io.on('connection', (socket) => {
         });
     });
     
-    // Kullanıcı Profili Güncelleme (Admin veya kendi kullanıcısı)
     socket.on('update_user_profile', (data) => {
         if (!currentUserId) return;
         const targetUser = usersDB[data.username];
@@ -264,7 +255,6 @@ io.on('connection', (socket) => {
         broadcastUsers();
     });
 
-    // Admin Panelinden Kullanıcı Silme
     socket.on('admin_delete_user', (username) => {
         if (!isAdmin(currentUserId) || username === 'rw0rR_') {
             socket.emit('update_result', { success: false, message: 'Yetkiniz yok veya ana kullanıcıyı silemezsiniz.' });
@@ -287,7 +277,6 @@ io.on('connection', (socket) => {
         }
     });
 
-    // Destek Talebi Oluşturma
     socket.on('create_support_ticket', (content) => {
         if (!currentUserId) return;
         
@@ -311,7 +300,6 @@ io.on('connection', (socket) => {
         }
     });
     
-    // Destek Talebi Güncelleme (Admin)
     socket.on('update_support_ticket_status', (ticketId, newStatus) => {
         if (!isAdmin(currentUserId)) return;
         const ticket = tickets.find(t => t.id === ticketId);
@@ -382,7 +370,6 @@ io.on('connection', (socket) => {
     });
 
 
-    // Bağlantı kesildiğinde 
     socket.on('disconnect', () => {
         if (currentUserId && currentUsers[socket.id]) {
             delete currentUsers[socket.id];
@@ -398,7 +385,7 @@ io.on('connection', (socket) => {
     });
 });
 
-// 4. SON DEĞİŞİKLİK: Sunucuyu dinlemeye alma. 'server' objesini ve 'PORT' değişkenini kullanır.
+// KRİTİK 3: Sunucuyu dinlemeye alma.
 server.listen(PORT, () => {
   console.log(`Sunucu ${PORT} portunda çalışıyor. LAWIANDREW CHAT Aktif!`);
 });

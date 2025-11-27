@@ -5,5 +5,4 @@
     "node": ">=18.0.0 <21.0.0" 
   },
   "description": "...",
-  // ... geri kalan kod ...
 }

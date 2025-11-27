@@ -1,8 +1,22 @@
 {
-  "name": "LAWIANDREW CHAT V5.0",
+  "name": "lawiandrew-chat-v5.0",
   "version": "1.0.0",
+  "description": "Socket.io Chat Application V5.0 - Render Deployment",
+  "main": "server.js",
   "engines": {
     "node": ">=18.0.0 <21.0.0" 
   },
-  "description": "...",
+  "scripts": {
+    "start": "node server.js", 
+    "dev": "concurrently \"npm start\" \"...client komutu...\""
+  },
+  "dependencies": {
+    "body-parser": "^2.2.1",
+    "express": "^5.1.0",
+    "socket.io": "^4.8.1",
+    "uuid": "^13.0.0"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
 }
